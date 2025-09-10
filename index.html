@@ -281,7 +281,7 @@ class PitchBookingDB {
         this.nextId = this.bookings.length ? Math.max(...this.bookings.map(b=>b.id))+1 : 1;
     }
     save(){ localStorage.setItem('bookings', JSON.stringify(this.bookings)); }
-    calculateHours(start,end){ return (new Date("1970-01-01T"+end)-new Date("1970-01-01T"+start))/(1000*60*60); }
+    calculateHours(start,end){ return (new Date(`1970-01-01T${end}`)-new Date(`1970-01-01T${start}`))/(1000*60*60); }
     addBooking(data){
         const hours=this.calculateHours(data.startTime,data.endTime);
         const booking={id:this.nextId++,...data,hours,totalPayment:hours*data.pricePerHour};
@@ -301,13 +301,12 @@ function isConflict(bookingData) {
         if (existingBooking.pitch === bookingData.pitch && existingBooking.date === bookingData.date) {
             const existingStart = new Date(`1970-01-01T${existingBooking.startTime}`);
             const existingEnd = new Date(`1970-01-01T${existingBooking.endTime}`);
-            // Check for time overlap: (StartA < EndB) and (EndA > StartB)
             if (newStart < existingEnd && newEnd > existingStart) {
-                return true; // Conflict found
+                return true;
             }
         }
     }
-    return false; // No conflicts
+    return false;
 }
 
 function addBooking(){
@@ -355,7 +354,6 @@ function addBooking(){
         const [year, month, day] = data.date.split('-').map(Number);
         const initialUTCDate = new Date(Date.UTC(year, month - 1, day));
 
-        // 1st Pass: Check all potential bookings for conflicts
         for (let i = 0; i < recurringCount; i++) {
             const newBookingData = { ...data };
             const nextDate = new Date(initialUTCDate);
@@ -373,7 +371,6 @@ function addBooking(){
             potentialBookings.push(newBookingData);
         }
 
-        // 2nd Pass: If conflicts exist, alert user and stop. Otherwise, add all bookings.
         if (conflicts.length > 0) {
             alert(`Booking Conflict: The following dates are unavailable for ${data.pitch}:\n\n${conflicts.join('\n')}\n\nNo bookings were added.`);
             return;
@@ -536,7 +533,21 @@ function exportToExcel() {
 }
 
 class CalendarController{
-    constructor(){ this.currentDate=new Date(); }
+    constructor(){
+        this.currentDate = new Date();
+        this.clientColorMap = new Map();
+    }
+
+    getClientColor(clientName) {
+        if (!this.clientColorMap.has(clientName)) {
+            const hue = Math.floor(Math.random() * 360);
+            const saturation = 70 + Math.floor(Math.random() * 10); // 70-80%
+            const lightness = 45 + Math.floor(Math.random() * 10);  // 45-55%
+            this.clientColorMap.set(clientName, `hsl(${hue}, ${saturation}%, ${lightness}%)`);
+        }
+        return this.clientColorMap.get(clientName);
+    }
+
     renderCalendar(){
         const year=this.currentDate.getFullYear(), month=this.currentDate.getMonth();
         document.getElementById("calendarMonth").textContent=this.currentDate.toLocaleString('default',{month:'long',year:'numeric'});
@@ -549,7 +560,8 @@ class CalendarController{
             const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
             db.getAllBookings().filter(b=>b.date===dateStr).forEach(b=>{
                 const div=document.createElement("div");
-                div.style.cssText="background:#667eea;color:white;padding:2px 4px;margin:2px 0;border-radius:4px;cursor:pointer;font-size:12px";
+                const bookingColor = this.getClientColor(b.clientName);
+                div.style.cssText=`background-color:${bookingColor};color:white;padding:2px 4px;margin:2px 0;border-radius:4px;cursor:pointer;font-size:12px`;
                 div.textContent=`${b.startTime}-${b.endTime} ${b.clientName}`;
                 div.onclick=()=>this.showBookingDetails(b);
                 cell.appendChild(div);
@@ -579,7 +591,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     } else {
         document.getElementById('login-screen').style.display = 'flex';
     }
-    // Event listeners for filters
     document.getElementById('yearFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientMonthFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientYearFilter').addEventListener('change', updateDashboard);
