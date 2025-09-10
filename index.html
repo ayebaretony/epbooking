@@ -50,7 +50,7 @@
         .form-group { display:flex; flex-direction:column; }
         .form-group label { font-weight:600; margin-bottom:8px; }
         .form-group input, .form-group select { padding:12px; border:2px solid #e9ecef; border-radius:10px; }
-        #yearFilter { padding: 5px 10px; border-radius: 8px; border: 1px solid #ddd; background-color: white; }
+        #yearFilter, #repeatClientMonthFilter, #repeatClientYearFilter { padding: 5px 10px; border-radius: 8px; border: 1px solid #ddd; background-color: white; }
         .calculated-field { background:#f8f9fa !important; font-weight:600; }
         .btn { padding:12px 20px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:25px; cursor:pointer; font-weight:600; }
         .btn:hover { opacity:0.9; }
@@ -114,7 +114,7 @@
             <div class="header">
                 <button class="signout-btn" onclick="signOut()">Sign Out</button>
                 <h1>⚽ Football Pitch Booking System</h1>
-                <p>Manage pitch rentals and track revenue</p>
+                <p>Manage your pitch rentals and track revenue</p>
                 <button class="export-btn" onclick="exportToExcel()">📊 Export</button>
             </div>
 
@@ -179,6 +179,17 @@
                         <div class="dashboard-card"><div class="card-title">This Year's Revenue</div><div class="metric"><div id="yearlyRevenue" class="metric-value">AED 0.00</div></div></div>
                         <div class="dashboard-card"><div class="card-title">Total Bookings</div><div class="metric"><div id="totalBookingsCount" class="metric-value">0</div></div></div>
                         <div class="dashboard-card"><div class="card-title">Revenue by Pitch</div><div id="pitchRevenueBreakdown"><div class="empty-state">No revenue data.</div></div></div>
+                        
+                        <div class="dashboard-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div class="card-title" style="margin-bottom: 0;">Repeat Client Revenue</div>
+                                <div style="display: flex; gap: 10px;">
+                                    <select id="repeatClientMonthFilter"></select>
+                                    <select id="repeatClientYearFilter"></select>
+                                </div>
+                            </div>
+                            <div id="repeatClientRevenue"><div class="empty-state">No repeat clients for this period.</div></div>
+                        </div>
                         
                         <div class="dashboard-card" style="grid-column: 1 / -1; min-height: 400px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -270,7 +281,7 @@ class PitchBookingDB {
         this.nextId = this.bookings.length ? Math.max(...this.bookings.map(b=>b.id))+1 : 1;
     }
     save(){ localStorage.setItem('bookings', JSON.stringify(this.bookings)); }
-    calculateHours(start,end){ return (new Date("2000-01-01T"+end)-new Date("2000-01-01T"+start))/(1000*60*60); }
+    calculateHours(start,end){ return (new Date("1970-01-01T"+end)-new Date("1970-01-01T"+start))/(1000*60*60); }
     addBooking(data){
         const hours=this.calculateHours(data.startTime,data.endTime);
         const booking={id:this.nextId++,...data,hours,totalPayment:hours*data.pricePerHour};
@@ -281,6 +292,23 @@ class PitchBookingDB {
 }
 const db=new PitchBookingDB();
 let monthlyRevenueChart;
+
+function isConflict(bookingData) {
+    const newStart = new Date(`1970-01-01T${bookingData.startTime}`);
+    const newEnd = new Date(`1970-01-01T${bookingData.endTime}`);
+
+    for (const existingBooking of db.getAllBookings()) {
+        if (existingBooking.pitch === bookingData.pitch && existingBooking.date === bookingData.date) {
+            const existingStart = new Date(`1970-01-01T${existingBooking.startTime}`);
+            const existingEnd = new Date(`1970-01-01T${existingBooking.endTime}`);
+            // Check for time overlap: (StartA < EndB) and (EndA > StartB)
+            if (newStart < existingEnd && newEnd > existingStart) {
+                return true; // Conflict found
+            }
+        }
+    }
+    return false; // No conflicts
+}
 
 function addBooking(){
     const data = {
@@ -297,11 +325,23 @@ function addBooking(){
         alert("Please fill all required fields.");
         return;
     }
+    
+    if (new Date(`1970-01-01T${data.startTime}`) >= new Date(`1970-01-01T${data.endTime}`)) {
+        alert("Error: Start time must be before the end time.");
+        return;
+    }
 
     const recurringType = document.getElementById('recurringType').value;
     const recurringCount = parseInt(document.getElementById('recurringCount').value, 10);
 
-    if (recurringType !== 'none') {
+    if (recurringType === 'none') {
+        if (isConflict(data)) {
+            alert(`Booking Conflict: The selected time on ${data.pitch} for ${data.date} is unavailable.`);
+            return;
+        }
+        db.addBooking(data);
+        alert("Booking added successfully!");
+    } else {
         if (!recurringCount || recurringCount < 1) {
             alert('Please enter a valid number of repetitions.');
             return;
@@ -310,9 +350,12 @@ function addBooking(){
             return;
         }
 
+        const potentialBookings = [];
+        const conflicts = [];
         const [year, month, day] = data.date.split('-').map(Number);
         const initialUTCDate = new Date(Date.UTC(year, month - 1, day));
 
+        // 1st Pass: Check all potential bookings for conflicts
         for (let i = 0; i < recurringCount; i++) {
             const newBookingData = { ...data };
             const nextDate = new Date(initialUTCDate);
@@ -322,14 +365,22 @@ function addBooking(){
             } else if (recurringType === 'monthly') {
                 nextDate.setUTCMonth(initialUTCDate.getUTCMonth() + i);
             }
-            
             newBookingData.date = nextDate.toISOString().slice(0, 10);
-            db.addBooking(newBookingData);
+            
+            if (isConflict(newBookingData)) {
+                conflicts.push(newBookingData.date);
+            }
+            potentialBookings.push(newBookingData);
         }
-        alert(`${recurringCount} recurring bookings have been added successfully!`);
 
-    } else {
-        db.addBooking(data);
+        // 2nd Pass: If conflicts exist, alert user and stop. Otherwise, add all bookings.
+        if (conflicts.length > 0) {
+            alert(`Booking Conflict: The following dates are unavailable for ${data.pitch}:\n\n${conflicts.join('\n')}\n\nNo bookings were added.`);
+            return;
+        } else {
+            potentialBookings.forEach(booking => db.addBooking(booking));
+            alert(`${recurringCount} recurring bookings have been added successfully!`);
+        }
     }
     
     document.getElementById('bookingForm').reset();
@@ -344,31 +395,48 @@ function updateDashboard() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-
-    const yearFilter = document.getElementById('yearFilter');
-    const selectedYearBeforeUpdate = yearFilter.value;
     const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
-    
-    yearFilter.innerHTML = '';
     if (uniqueYears.length === 0) { uniqueYears.push(currentYear); }
+
+    const chartYearFilter = document.getElementById('yearFilter');
+    const selectedChartYear = chartYearFilter.value;
+    chartYearFilter.innerHTML = '';
     uniqueYears.forEach(year => {
         const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        yearFilter.appendChild(option);
+        option.value = year; option.textContent = year;
+        chartYearFilter.appendChild(option);
     });
-    yearFilter.value = selectedYearBeforeUpdate && uniqueYears.includes(parseInt(selectedYearBeforeUpdate)) ? selectedYearBeforeUpdate : uniqueYears[0];
+    chartYearFilter.value = selectedChartYear && uniqueYears.includes(parseInt(selectedChartYear)) ? selectedChartYear : uniqueYears[0];
+
+    const repeatMonthFilter = document.getElementById('repeatClientMonthFilter');
+    const repeatYearFilter = document.getElementById('repeatClientYearFilter');
+    const selectedRepeatMonth = repeatMonthFilter.value;
+    const selectedRepeatYear = repeatYearFilter.value;
+
+    if (repeatMonthFilter.options.length === 0) {
+        ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        .forEach((month, index) => {
+            const option = document.createElement('option');
+            option.value = index; option.textContent = month;
+            repeatMonthFilter.appendChild(option);
+        });
+    }
+    repeatYearFilter.innerHTML = '';
+    uniqueYears.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year; option.textContent = year;
+        repeatYearFilter.appendChild(option);
+    });
+    repeatMonthFilter.value = selectedRepeatMonth || currentMonth;
+    repeatYearFilter.value = selectedRepeatYear || currentYear;
 
     const totalRevenue = bookings.reduce((sum, b) => sum + b.totalPayment, 0);
     document.getElementById('totalRevenue').textContent = `AED ${totalRevenue.toFixed(2)}`;
-    
-    const monthlyRevenue = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; })
+    const thisMonthRevenue = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; })
         .reduce((sum, b) => sum + b.totalPayment, 0);
-    document.getElementById('monthlyRevenue').textContent = `AED ${monthlyRevenue.toFixed(2)}`;
-    
-    const yearlyRevenue = bookings.filter(b => new Date(b.date).getFullYear() === currentYear).reduce((sum, b) => sum + b.totalPayment, 0);
-    document.getElementById('yearlyRevenue').textContent = `AED ${yearlyRevenue.toFixed(2)}`;
-    
+    document.getElementById('monthlyRevenue').textContent = `AED ${thisMonthRevenue.toFixed(2)}`;
+    const thisYearRevenue = bookings.filter(b => new Date(b.date).getFullYear() === currentYear).reduce((sum, b) => sum + b.totalPayment, 0);
+    document.getElementById('yearlyRevenue').textContent = `AED ${thisYearRevenue.toFixed(2)}`;
     document.getElementById('totalBookingsCount').textContent = bookings.length;
 
     const pitchRevenue = bookings.reduce((acc, b) => { acc[b.pitch] = (acc[b.pitch] || 0) + b.totalPayment; return acc; }, {});
@@ -381,15 +449,34 @@ function updateDashboard() {
             .join('');
     }
 
-    const selectedYearForChart = parseInt(yearFilter.value);
-    const monthlyData = Array(12).fill(0);
-    bookings
-        .filter(b => new Date(b.date).getFullYear() === selectedYearForChart)
-        .forEach(b => {
-            const monthIndex = new Date(b.date).getMonth();
-            monthlyData[monthIndex] += b.totalPayment;
-        });
+    const yearForRepeat = parseInt(repeatYearFilter.value);
+    const monthForRepeat = parseInt(repeatMonthFilter.value);
+    const filteredBookings = bookings.filter(b => {
+        const d = new Date(b.date); return d.getFullYear() === yearForRepeat && d.getMonth() === monthForRepeat;
+    });
+    const bookingsByClient = filteredBookings.reduce((acc, b) => {
+        acc[b.clientName] = acc[b.clientName] || []; acc[b.clientName].push(b); return acc;
+    }, {});
+    const repeatClientRevenue = Object.entries(bookingsByClient)
+        .filter(([, clientBookings]) => clientBookings.length > 1)
+        .reduce((acc, [clientName, clientBookings]) => {
+            acc[clientName] = clientBookings.reduce((sum, b) => sum + b.totalPayment, 0); return acc;
+        }, {});
+    const repeatClientContainer = document.getElementById('repeatClientRevenue');
+    if (Object.keys(repeatClientRevenue).length === 0) {
+        repeatClientContainer.innerHTML = `<div class="empty-state">No repeat clients for this period.</div>`;
+    } else {
+        repeatClientContainer.innerHTML = Object.entries(repeatClientRevenue)
+            .sort(([, revenueA], [, revenueB]) => revenueB - revenueA)
+            .map(([client, revenue]) => `<div style="padding: 6px 0; display:flex; justify-content:space-between; border-bottom: 1px solid #eee;"><strong>${client}:</strong> <span>AED ${revenue.toFixed(2)}</span></div>`)
+            .join('');
+    }
 
+    const selectedYearForChart = parseInt(chartYearFilter.value);
+    const monthlyData = Array(12).fill(0);
+    bookings.filter(b => new Date(b.date).getFullYear() === selectedYearForChart).forEach(b => {
+        monthlyData[new Date(b.date).getMonth()] += b.totalPayment;
+    });
     const chartLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
 
@@ -400,16 +487,10 @@ function updateDashboard() {
     } else {
         monthlyRevenueChart = new Chart(ctx, {
             type: 'bar',
-            data: {
-                labels: chartLabels,
-                datasets: [{
-                    label: `Revenue for ${selectedYearForChart}`,
-                    data: monthlyData,
-                    backgroundColor: 'rgba(102, 126, 234, 0.6)',
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 1,
-                    borderRadius: 5
-                }]
+            data: { labels: chartLabels, datasets: [{
+                label: `Revenue for ${selectedYearForChart}`, data: monthlyData,
+                backgroundColor: 'rgba(102, 126, 234, 0.6)', borderColor: 'rgba(102, 126, 234, 1)',
+                borderWidth: 1, borderRadius: 5 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
@@ -498,7 +579,10 @@ document.addEventListener("DOMContentLoaded",()=>{
     } else {
         document.getElementById('login-screen').style.display = 'flex';
     }
+    // Event listeners for filters
     document.getElementById('yearFilter').addEventListener('change', updateDashboard);
+    document.getElementById('repeatClientMonthFilter').addEventListener('change', updateDashboard);
+    document.getElementById('repeatClientYearFilter').addEventListener('change', updateDashboard);
     document.getElementById('password').addEventListener('keypress', function(e){ if (e.key === 'Enter') handleLogin(); });
 });
 </script>
