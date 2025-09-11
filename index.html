@@ -50,7 +50,7 @@
         .form-group { display:flex; flex-direction:column; }
         .form-group label { font-weight:600; margin-bottom:8px; }
         .form-group input, .form-group select { padding:12px; border:2px solid #e9ecef; border-radius:10px; }
-        #yearFilter, #repeatClientMonthFilter, #repeatClientYearFilter { padding: 5px 10px; border-radius: 8px; border: 1px solid #ddd; background-color: white; }
+        #yearFilter, #repeatClientMonthFilter, #repeatClientYearFilter, #pitchRevenueMonthFilter, #pitchRevenueYearFilter { padding: 5px 10px; border-radius: 8px; border: 1px solid #ddd; background-color: white; }
         .calculated-field { background:#f8f9fa !important; font-weight:600; }
         .btn { padding:12px 20px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:25px; cursor:pointer; font-weight:600; }
         .btn:hover { opacity:0.9; }
@@ -178,7 +178,17 @@
                         <div class="dashboard-card"><div class="card-title">This Month's Revenue</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0.00</div></div></div>
                         <div class="dashboard-card"><div class="card-title">This Year's Revenue</div><div class="metric"><div id="yearlyRevenue" class="metric-value">AED 0.00</div></div></div>
                         <div class="dashboard-card"><div class="card-title">Total Bookings</div><div class="metric"><div id="totalBookingsCount" class="metric-value">0</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">Revenue by Pitch</div><div id="pitchRevenueBreakdown"><div class="empty-state">No revenue data.</div></div></div>
+                        
+                        <div class="dashboard-card">
+                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div class="card-title" style="margin-bottom: 0;">Revenue by Pitch</div>
+                                <div style="display: flex; gap: 10px;">
+                                    <select id="pitchRevenueMonthFilter"></select>
+                                    <select id="pitchRevenueYearFilter"></select>
+                                </div>
+                            </div>
+                            <div id="pitchRevenueBreakdown"><div class="empty-state">No revenue data.</div></div>
+                        </div>
                         
                         <div class="dashboard-card">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -394,39 +404,53 @@ function updateDashboard() {
     const currentMonth = now.getMonth();
     const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
     if (uniqueYears.length === 0) { uniqueYears.push(currentYear); }
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+    // --- Populate Multiple Filters ---
     const chartYearFilter = document.getElementById('yearFilter');
-    const selectedChartYear = chartYearFilter.value;
-    chartYearFilter.innerHTML = '';
-    uniqueYears.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year; option.textContent = year;
-        chartYearFilter.appendChild(option);
-    });
-    chartYearFilter.value = selectedChartYear && uniqueYears.includes(parseInt(selectedChartYear)) ? selectedChartYear : uniqueYears[0];
-
     const repeatMonthFilter = document.getElementById('repeatClientMonthFilter');
     const repeatYearFilter = document.getElementById('repeatClientYearFilter');
-    const selectedRepeatMonth = repeatMonthFilter.value;
-    const selectedRepeatYear = repeatYearFilter.value;
+    const pitchMonthFilter = document.getElementById('pitchRevenueMonthFilter');
+    const pitchYearFilter = document.getElementById('pitchRevenueYearFilter');
 
-    if (repeatMonthFilter.options.length === 0) {
-        ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-        .forEach((month, index) => {
-            const option = document.createElement('option');
-            option.value = index; option.textContent = month;
-            repeatMonthFilter.appendChild(option);
-        });
-    }
-    repeatYearFilter.innerHTML = '';
-    uniqueYears.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year; option.textContent = year;
-        repeatYearFilter.appendChild(option);
+    // Preserve selections
+    const selectedVals = {
+        chartYear: chartYearFilter.value,
+        repeatMonth: repeatMonthFilter.value,
+        repeatYear: repeatYearFilter.value,
+        pitchMonth: pitchMonthFilter.value,
+        pitchYear: pitchYearFilter.value
+    };
+
+    // Populate month dropdowns (if empty)
+    [repeatMonthFilter, pitchMonthFilter].forEach(filter => {
+        if (filter.options.length === 0) {
+            monthNames.forEach((month, index) => {
+                const option = document.createElement('option');
+                option.value = index; option.textContent = month;
+                filter.appendChild(option);
+            });
+        }
     });
-    repeatMonthFilter.value = selectedRepeatMonth || currentMonth;
-    repeatYearFilter.value = selectedRepeatYear || currentYear;
+    
+    // Populate year dropdowns
+    [chartYearFilter, repeatYearFilter, pitchYearFilter].forEach(filter => {
+        filter.innerHTML = '';
+        uniqueYears.forEach(year => {
+            const option = document.createElement('option');
+            option.value = year; option.textContent = year;
+            filter.appendChild(option);
+        });
+    });
 
+    // Restore selections or set defaults
+    chartYearFilter.value = selectedVals.chartYear && uniqueYears.includes(parseInt(selectedVals.chartYear)) ? selectedVals.chartYear : uniqueYears[0];
+    repeatMonthFilter.value = selectedVals.repeatMonth || currentMonth;
+    repeatYearFilter.value = selectedVals.repeatYear && uniqueYears.includes(parseInt(selectedVals.repeatYear)) ? selectedVals.repeatYear : currentYear;
+    pitchMonthFilter.value = selectedVals.pitchMonth || currentMonth;
+    pitchYearFilter.value = selectedVals.pitchYear && uniqueYears.includes(parseInt(selectedVals.pitchYear)) ? selectedVals.pitchYear : currentYear;
+
+    // --- Metric Cards (Current Period) ---
     const totalRevenue = bookings.reduce((sum, b) => sum + b.totalPayment, 0);
     document.getElementById('totalRevenue').textContent = `AED ${totalRevenue.toFixed(2)}`;
     const thisMonthRevenue = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; })
@@ -436,22 +460,29 @@ function updateDashboard() {
     document.getElementById('yearlyRevenue').textContent = `AED ${thisYearRevenue.toFixed(2)}`;
     document.getElementById('totalBookingsCount').textContent = bookings.length;
 
-    const pitchRevenue = bookings.reduce((acc, b) => { acc[b.pitch] = (acc[b.pitch] || 0) + b.totalPayment; return acc; }, {});
+    // --- Revenue by Pitch (Filtered) ---
+    const yearForPitch = parseInt(pitchYearFilter.value);
+    const monthForPitch = parseInt(pitchMonthFilter.value);
+    const filteredForPitch = bookings.filter(b => {
+        const d = new Date(b.date); return d.getFullYear() === yearForPitch && d.getMonth() === monthForPitch;
+    });
+    const pitchRevenue = filteredForPitch.reduce((acc, b) => { acc[b.pitch] = (acc[b.pitch] || 0) + b.totalPayment; return acc; }, {});
     const pitchRevenueContainer = document.getElementById('pitchRevenueBreakdown');
     if (Object.keys(pitchRevenue).length === 0) {
-        pitchRevenueContainer.innerHTML = `<div class="empty-state">No revenue data.</div>`;
+        pitchRevenueContainer.innerHTML = `<div class="empty-state">No revenue data for this period.</div>`;
     } else {
         pitchRevenueContainer.innerHTML = Object.entries(pitchRevenue)
             .map(([pitch, revenue]) => `<div style="padding: 6px 0; display:flex; justify-content:space-between; border-bottom: 1px solid #eee;"><strong>${pitch}:</strong> <span>AED ${revenue.toFixed(2)}</span></div>`)
             .join('');
     }
 
+    // --- Repeat Client Revenue (Filtered) ---
     const yearForRepeat = parseInt(repeatYearFilter.value);
     const monthForRepeat = parseInt(repeatMonthFilter.value);
-    const filteredBookings = bookings.filter(b => {
+    const filteredForRepeat = bookings.filter(b => {
         const d = new Date(b.date); return d.getFullYear() === yearForRepeat && d.getMonth() === monthForRepeat;
     });
-    const bookingsByClient = filteredBookings.reduce((acc, b) => {
+    const bookingsByClient = filteredForRepeat.reduce((acc, b) => {
         acc[b.clientName] = acc[b.clientName] || []; acc[b.clientName].push(b); return acc;
     }, {});
     const repeatClientRevenue = Object.entries(bookingsByClient)
@@ -469,6 +500,7 @@ function updateDashboard() {
             .join('');
     }
 
+    // --- Chart ---
     const selectedYearForChart = parseInt(chartYearFilter.value);
     const monthlyData = Array(12).fill(0);
     bookings.filter(b => new Date(b.date).getFullYear() === selectedYearForChart).forEach(b => {
@@ -541,8 +573,8 @@ class CalendarController{
     getClientColor(clientName) {
         if (!this.clientColorMap.has(clientName)) {
             const hue = Math.floor(Math.random() * 360);
-            const saturation = 70 + Math.floor(Math.random() * 10); // 70-80%
-            const lightness = 45 + Math.floor(Math.random() * 10);  // 45-55%
+            const saturation = 70 + Math.floor(Math.random() * 10);
+            const lightness = 45 + Math.floor(Math.random() * 10);
             this.clientColorMap.set(clientName, `hsl(${hue}, ${saturation}%, ${lightness}%)`);
         }
         return this.clientColorMap.get(clientName);
@@ -591,9 +623,12 @@ document.addEventListener("DOMContentLoaded",()=>{
     } else {
         document.getElementById('login-screen').style.display = 'flex';
     }
+    // Event listeners for filters
     document.getElementById('yearFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientMonthFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientYearFilter').addEventListener('change', updateDashboard);
+    document.getElementById('pitchRevenueMonthFilter').addEventListener('change', updateDashboard);
+    document.getElementById('pitchRevenueYearFilter').addEventListener('change', updateDashboard);
     document.getElementById('password').addEventListener('keypress', function(e){ if (e.key === 'Enter') handleLogin(); });
 });
 </script>
