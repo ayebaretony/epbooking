@@ -294,10 +294,12 @@ function resetInactivityTimer() {
 async function showApp() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-wrapper').style.display = 'block';
+    
     await setupBookingFilters();
     await displayBookings(); 
     await calendar.renderCalendar(); 
     await updateDashboard();
+    
     resetInactivityTimer();
     ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(event => 
         window.addEventListener(event, resetInactivityTimer)
