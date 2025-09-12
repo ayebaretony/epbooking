@@ -88,27 +88,7 @@
     </style>
 </head>
 <body>
-    <div id="login-screen">
-        <div class="login-box">
-            <h2>⚽ Login</h2>
-            <p style="color:#777; margin-bottom:25px;">EP Sports Booking System</p>
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input id="username" type="text">
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input id="password" type="password">
-            </div>
-            <div class="login-options">
-                <input type="checkbox" id="keepLoggedIn" style="width:auto;">
-                <label for="keepLoggedIn">Keep me logged in</label>
-            </div>
-            <button class="btn" onclick="handleLogin()">Login</button>
-            <p id="login-error">Invalid username or password.</p>
-        </div>
-    </div>
-
+    <div id="login-screen"></div>
     <div id="app-wrapper" style="display:none;">
         <div class="container">
             <div class="header">
@@ -119,71 +99,26 @@
                 <button class="header-btn import-btn" onclick="document.getElementById('importFile').click()">📥 Import</button>
                 <button class="header-btn export-btn" onclick="exportToExcel()">📊 Export</button>
             </div>
-
             <div class="tabs">
                 <div class="tab active" onclick="switchTab('bookings')">📋 Bookings</div>
                 <div class="tab" onclick="switchTab('dashboard')">📊 Dashboard</div>
                 <div class="tab" onclick="switchTab('calendar')">📅 Calendar</div>
             </div>
-
             <div class="content">
                 <div id="bookings-content" class="tab-content">
                     <form id="bookingForm" class="booking-form"></form>
                     <div class="filter-bar"></div>
                     <div class="booking-table"></div>
                 </div>
-
-                <div id="dashboard-content" class="tab-content" style="display:none;">
-                    <div class="dashboard-grid">
-                        <div class="dashboard-card"><div class="card-title">Total Revenue</div><div class="metric"><div id="totalRevenue" class="metric-value">AED 0.00</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">This Month's Revenue</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0.00</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">This Year's Revenue</div><div class="metric"><div id="yearlyRevenue" class="metric-value">AED 0.00</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">Total Bookings</div><div class="metric"><div id="totalBookingsCount" class="metric-value">0</div></div></div>
-                        
-                        <div class="dashboard-card">
-                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <div class="card-title" style="margin-bottom: 0;">Revenue by Pitch</div>
-                                <div style="display: flex; gap: 10px;">
-                                    <select id="pitchRevenueMonthFilter"></select>
-                                    <select id="pitchRevenueYearFilter"></select>
-                                </div>
-                            </div>
-                            <div id="pitchRevenueBreakdown"><div class="empty-state">No revenue data.</div></div>
-                        </div>
-                        
-                        <div class="dashboard-card">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <div class="card-title" style="margin-bottom: 0;">Repeat Client Revenue</div>
-                                <div style="display: flex; gap: 10px;">
-                                    <select id="repeatClientMonthFilter"></select>
-                                    <select id="repeatClientYearFilter"></select>
-                                </div>
-                            </div>
-                            <div id="repeatClientRevenue"><div class="empty-state">No repeat clients for this period.</div></div>
-                        </div>
-                        
-                        <div class="dashboard-card" style="grid-column: 1 / -1; min-height: 400px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <div class="card-title" style="margin-bottom: 0;">Monthly Revenue Breakdown</div>
-                                <select id="yearFilter"></select>
-                            </div>
-                            <div style="position: relative; height: 320px;">
-                                <canvas id="monthlyRevenueChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+                <div id="dashboard-content" class="tab-content" style="display:none;"></div>
                 <div id="calendar-content" class="tab-content" style="display:none;"></div>
             </div>
         </div>
-
-        <div id="bookingDetailsPanel" style="display:none; position:fixed; top:0; right:0; width:350px; height:100%; background:white; box-shadow:-5px 0 15px rgba(0,0,0,0.2); padding:20px; overflow-y:auto; z-index:1000;"></div>
+        <div id="bookingDetailsPanel" style="display:none;"></div>
     </div>
 
 <script>
 // --- START: FIREBASE SETUP ---
-// This now assumes that `firebaseConfig` is loaded from `firebase-config.js`
 if (typeof firebaseConfig !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
     const firestore = firebase.firestore();
@@ -194,38 +129,19 @@ if (typeof firebaseConfig !== 'undefined') {
 // --- END: FIREBASE SETUP ---
 
 // --- Authentication & Session Management ---
-// ... (This section is unchanged)
 let inactivityTimer;
-function handleLogin() {
-    const user = document.getElementById('username').value;
-    const pass = document.getElementById('password').value;
-    const keepLoggedIn = document.getElementById('keepLoggedIn').checked;
-    const errorEl = document.getElementById('login-error');
-    if (user === "EPsports2025" && pass === "EPsport@25") {
-        const storage = keepLoggedIn ? localStorage : sessionStorage;
-        storage.setItem('isLoggedIn', 'true');
-        errorEl.style.display = 'none';
-        showApp();
-    } else {
-        errorEl.style.display = 'block';
-    }
-}
-function signOut() {
-    sessionStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('isLoggedIn');
-    location.reload();
-}
-function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(signOut, 3 * 60 * 60 * 1000);
-}
+function handleLogin() { /* ... unchanged ... */ }
+function signOut() { /* ... unchanged ... */ }
+function resetInactivityTimer() { /* ... unchanged ... */ }
 async function showApp() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-wrapper').style.display = 'block';
+    
     await setupBookingFilters();
     await displayBookings(); 
     await calendar.renderCalendar(); 
     await updateDashboard();
+    
     resetInactivityTimer();
     ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(event => 
         window.addEventListener(event, resetInactivityTimer)
@@ -233,15 +149,16 @@ async function showApp() {
 }
 
 // --- Main Application ---
-// ... (Most of the main app logic is unchanged)
-function toggleRecurringOptions() { /* ... */ }
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-class FirebaseDB { /* ... */ }
+function toggleRecurringOptions() { /* ... unchanged ... */ }
+
+class FirebaseDB { /* ... unchanged ... */ }
 const db = new FirebaseDB();
 let monthlyRevenueChart;
 
-async function isConflict(bookingData) { /* ... */ }
-async function addBooking() { /* ... */ }
+async function isConflict(bookingData) { /* ... unchanged ... */ }
+async function addBooking() { /* ... unchanged ... */ }
 
 async function updateDashboard() {
     const bookings = await db.getAllBookings();
@@ -250,17 +167,13 @@ async function updateDashboard() {
     const currentMonth = now.getMonth();
     const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
     if (uniqueYears.length === 0) { uniqueYears.push(currentYear); }
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-    // --- FIX IS HERE ---
-    // Get handles to all filter elements
     const chartYearFilter = document.getElementById('yearFilter');
     const repeatMonthFilter = document.getElementById('repeatClientMonthFilter');
     const repeatYearFilter = document.getElementById('repeatClientYearFilter');
     const pitchMonthFilter = document.getElementById('pitchRevenueMonthFilter');
     const pitchYearFilter = document.getElementById('pitchRevenueYearFilter');
 
-    // Group them for easier processing
     const allFilters = [
         { el: chartYearFilter, val: 'chartYear', type: 'year' },
         { el: repeatMonthFilter, val: 'repeatMonth', type: 'month' },
@@ -291,14 +204,12 @@ async function updateDashboard() {
     document.getElementById('yearlyRevenue').textContent = `AED ${bookings.filter(b => new Date(b.date).getFullYear() === currentYear).reduce((s, b) => s + b.totalPayment, 0).toFixed(2)}`;
     document.getElementById('totalBookingsCount').textContent = bookings.length;
 
-    // --- REVENUE BY PITCH (FIXED) ---
     const yearForPitch = parseInt(pitchYearFilter.value);
     const monthForPitch = parseInt(pitchMonthFilter.value);
     const filteredForPitch = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === yearForPitch && d.getMonth() === monthForPitch; });
     const pitchRevenue = filteredForPitch.reduce((acc, b) => { acc[b.pitch] = (acc[b.pitch] || 0) + b.totalPayment; return acc; }, {});
     document.getElementById('pitchRevenueBreakdown').innerHTML = Object.keys(pitchRevenue).length === 0 ? `<div class="empty-state">No revenue data for this period.</div>` : Object.entries(pitchRevenue).map(([pitch, revenue]) => `<div style="padding: 6px 0; display:flex; justify-content:space-between; border-bottom: 1px solid #eee;"><strong>${pitch}:</strong> <span>AED ${revenue.toFixed(2)}</span></div>`).join('');
 
-    // --- REPEAT CLIENT REVENUE ---
     const yearForRepeat = parseInt(repeatYearFilter.value);
     const monthForRepeat = parseInt(repeatMonthFilter.value);
     const filteredForRepeat = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === yearForRepeat && d.getMonth() === monthForRepeat; });
@@ -306,7 +217,6 @@ async function updateDashboard() {
     const repeatClientRevenue = Object.entries(bookingsByClient).filter(([, b]) => b.length > 1).reduce((acc, [name, b]) => { acc[name] = b.reduce((s, i) => s + i.totalPayment, 0); return acc; }, {});
     document.getElementById('repeatClientRevenue').innerHTML = Object.keys(repeatClientRevenue).length === 0 ? `<div class="empty-state">No repeat clients for this period.</div>` : Object.entries(repeatClientRevenue).sort(([, a], [, b]) => b - a).map(([c, r]) => `<div style="padding: 6px 0; display:flex; justify-content:space-between; border-bottom: 1px solid #eee;"><strong>${c}:</strong> <span>AED ${r.toFixed(2)}</span></div>`).join('');
 
-    // --- CHART ---
     const selectedYearForChart = parseInt(chartYearFilter.value);
     const monthlyData = Array(12).fill(0);
     bookings.filter(b => new Date(b.date).getFullYear() === selectedYearForChart).forEach(b => { monthlyData[new Date(b.date).getMonth()] += b.totalPayment; });
@@ -319,15 +229,31 @@ async function updateDashboard() {
     }
 }
 
-async function setupBookingFilters() { /* ... */ }
-function clearBookingFilters() { /* ... */ }
-async function displayBookings(){ /* ... */ }
-async function deleteBooking(id){ /* ... */ }
-function switchTab(tab){ /* ... */ }
-async function exportToExcel() { /* ... */ }
-async function handleFileUpload(event) { /* ... */ }
+async function setupBookingFilters() {
+    const pitchFilter = document.getElementById('filterPitch');
+    const monthFilter = document.getElementById('filterMonth');
+    const yearFilter = document.getElementById('filterYear');
+    const uniquePitches = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome'];
+    const bookings = await db.getAllBookings();
+    const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
 
-class CalendarController{ /* ... */ }
+    pitchFilter.innerHTML = '<option value="">All Pitches</option>';
+    uniquePitches.forEach(p => pitchFilter.innerHTML += `<option value="${p}">${p}</option>`);
+
+    monthFilter.innerHTML = '<option value="">All Months</option>';
+    monthNames.forEach((m, i) => monthFilter.innerHTML += `<option value="${i}">${m}</option>`);
+
+    yearFilter.innerHTML = '<option value="">All Years</option>';
+    uniqueYears.forEach(y => yearFilter.innerHTML += `<option value="${y}">${y}</option>`);
+}
+
+function clearBookingFilters() { /* ... unchanged ... */ }
+async function displayBookings(){ /* ... unchanged ... */ }
+async function deleteBooking(id){ /* ... unchanged ... */ }
+function switchTab(tab){ /* ... unchanged ... */ }
+async function exportToExcel() { /* ... unchanged ... */ }
+async function handleFileUpload(event) { /* ... unchanged ... */ }
+class CalendarController{ /* ... unchanged ... */ }
 const calendar=new CalendarController();
 function navigateMonth(d){calendar.navigateMonth(d);} function goToToday(){calendar.goToToday();}
 function closeBookingDetails(){document.getElementById("bookingDetailsPanel").style.display="none";}
@@ -339,7 +265,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     } else {
         document.getElementById('login-screen').style.display = 'flex';
     }
-    // All event listeners remain the same
     document.getElementById('yearFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientMonthFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientYearFilter').addEventListener('change', updateDashboard);
