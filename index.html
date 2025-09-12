@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Pitch Booking System</title>
     
-    <script src="firebase-config.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -258,12 +256,25 @@
 
 <script>
 // --- START: FIREBASE SETUP ---
-if (typeof firebaseConfig !== 'undefined') {
+// PASTE YOUR FIREBASE CONFIG OBJECT HERE
+const firebaseConfig = {
+    apiKey: "AIzaSyA9bEKptoXnOyUpZN-e2bZRrt15CWNLVvY",
+    authDomain: "pitchbookingsystem-6e222.firebaseapp.com",
+    projectId: "pitchbookingsystem-6e222",
+    storageBucket: "pitchbookingsystem-6e222.firebasestorage.app",
+    messagingSenderId: "486051720706",
+    appId: "1:486051720706:web:2bbb83988fc6d623c1011b",
+    measurementId: "G-PT7QJYP2T1"
+  };
+
+
+// Initialize Firebase
+if (firebaseConfig.apiKey.startsWith("PASTE_YOUR")) {
+    document.body.innerHTML = '<h1>Firebase configuration is missing. Please paste your firebaseConfig object in the script.</h1>';
+    console.error("Firebase config object not found.");
+} else {
     firebase.initializeApp(firebaseConfig);
     const firestore = firebase.firestore();
-} else {
-    console.error("Firebase config object not found. Make sure `firebase-config.js` is loaded correctly.");
-    document.body.innerHTML = '<h1>Firebase configuration is missing. Please set up `firebase-config.js`.</h1>';
 }
 // --- END: FIREBASE SETUP ---
 
@@ -295,12 +306,10 @@ function resetInactivityTimer() {
 async function showApp() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-wrapper').style.display = 'block';
-    
     await setupBookingFilters();
     await displayBookings(); 
     await calendar.renderCalendar(); 
     await updateDashboard();
-    
     resetInactivityTimer();
     ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(event => 
         window.addEventListener(event, resetInactivityTimer)
