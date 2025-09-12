@@ -201,6 +201,7 @@
                         <div class="dashboard-card"><div class="card-title">This Month's Revenue</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0.00</div></div></div>
                         <div class="dashboard-card"><div class="card-title">This Year's Revenue</div><div class="metric"><div id="yearlyRevenue" class="metric-value">AED 0.00</div></div></div>
                         <div class="dashboard-card"><div class="card-title">Total Bookings</div><div class="metric"><div id="totalBookingsCount" class="metric-value">0</div></div></div>
+                        
                         <div class="dashboard-card">
                              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <div class="card-title" style="margin-bottom: 0;">Revenue by Pitch</div>
@@ -211,6 +212,7 @@
                             </div>
                             <div id="pitchRevenueBreakdown"><div class="empty-state">No revenue data.</div></div>
                         </div>
+                        
                         <div class="dashboard-card">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <div class="card-title" style="margin-bottom: 0;">Repeat Client Revenue</div>
@@ -221,6 +223,7 @@
                             </div>
                             <div id="repeatClientRevenue"><div class="empty-state">No repeat clients for this period.</div></div>
                         </div>
+                        
                         <div class="dashboard-card" style="grid-column: 1 / -1; min-height: 400px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <div class="card-title" style="margin-bottom: 0;">Monthly Revenue Breakdown</div>
@@ -291,12 +294,10 @@ function resetInactivityTimer() {
 async function showApp() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-wrapper').style.display = 'block';
-    
     await setupBookingFilters();
     await displayBookings(); 
     await calendar.renderCalendar(); 
     await updateDashboard();
-    
     resetInactivityTimer();
     ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(event => 
         window.addEventListener(event, resetInactivityTimer)
@@ -473,7 +474,6 @@ async function setupBookingFilters() {
     const uniquePitches = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome'];
     const bookings = await db.getAllBookings();
     const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
-
     pitchFilter.innerHTML = '<option value="">All Pitches</option>';
     uniquePitches.forEach(p => pitchFilter.innerHTML += `<option value="${p}">${p}</option>`);
     monthFilter.innerHTML = '<option value="">All Months</option>';
