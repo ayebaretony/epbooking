@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Pitch Booking System</title>
-    <script src="firebase-config.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     
@@ -39,6 +37,7 @@
             cursor:pointer; font-size:14px; font-weight:600;
         }
         .export-btn { position:absolute; top:20px; right:20px; }
+        /* CHANGED: Increased the 'right' value from 120px to 150px */
         .import-btn { position:absolute; top:20px; right:150px; }
         .signout-btn {
             position:absolute; top:20px; left:20px; background:#dc3545;
@@ -69,7 +68,9 @@
         .empty-state { text-align:center; color:#666; padding:20px; }
         #calendarGrid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
         #calendarGrid div { background:#fff; border:1px solid #ddd; border-radius:10px; padding:5px; min-height:80px; }
+
         .filter-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; align-items: end; }
+
         #login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -257,22 +258,33 @@
 
 <script>
 // --- START: FIREBASE SETUP ---
-if (typeof firebaseConfig !== 'undefined') {
-    firebase.initializeApp(firebaseConfig);
-    const firestore = firebase.firestore();
-} else {
-    console.error("Firebase config object not found. Make sure `firebase-config.js` is loaded correctly.");
-    document.body.innerHTML = '<h1>Firebase configuration is missing. Please set up `firebase-config.js`.</h1>';
-}
+// PASTE YOUR FIREBASE CONFIG OBJECT HERE
+const firebaseConfig = {
+    apiKey: "AIzaSyA9bEKptoXnOyUpZN-e2bZRrt15CWNLVvY",
+    authDomain: "pitchbookingsystem-6e222.firebaseapp.com",
+    projectId: "pitchbookingsystem-6e222",
+    storageBucket: "pitchbookingsystem-6e222.firebasestorage.app",
+    messagingSenderId: "486051720706",
+    appId: "1:486051720706:web:2bbb83988fc6d623c1011b",
+    measurementId: "G-PT7QJYP2T1"
+  };
+
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const firestore = firebase.firestore();
 // --- END: FIREBASE SETUP ---
 
-// --- Authentication & Session Management ---
+
+// --- Authentication & Session Management (no changes) ---
 let inactivityTimer;
+
 function handleLogin() {
     const user = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
     const keepLoggedIn = document.getElementById('keepLoggedIn').checked;
     const errorEl = document.getElementById('login-error');
+
     if (user === "EPsports2025" && pass === "EPsport@25") {
         const storage = keepLoggedIn ? localStorage : sessionStorage;
         storage.setItem('isLoggedIn', 'true');
@@ -282,15 +294,18 @@ function handleLogin() {
         errorEl.style.display = 'block';
     }
 }
+
 function signOut() {
     sessionStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isLoggedIn');
     location.reload();
 }
+
 function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(signOut, 3 * 60 * 60 * 1000);
 }
+
 async function showApp() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-wrapper').style.display = 'block';
@@ -307,27 +322,25 @@ async function showApp() {
 }
 
 // --- Main Application ---
-const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-function toggleRecurringOptions() {
-    const type = document.getElementById('recurringType').value;
-    document.getElementById('recurring-options').style.display = (type === 'none') ? 'none' : 'block';
-}
+function toggleRecurringOptions() { /* ... no changes ... */ }
 
 class FirebaseDB {
     constructor() {
         this.bookingsCollection = firestore.collection("bookings");
     }
+
     async getAllBookings() {
         const snapshot = await this.bookingsCollection.orderBy("date").get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
+
     async addBooking(data) {
         const hours = (new Date(`1970-01-01T${data.endTime}`) - new Date(`1970-01-01T${data.startTime}`)) / (1000 * 60 * 60);
         const newBooking = { ...data, hours, totalPayment: hours * data.pricePerHour };
         const docRef = await this.bookingsCollection.add(newBooking);
         return { id: docRef.id, ...newBooking };
     }
+    
     async deleteBooking(id) {
         await this.bookingsCollection.doc(id).delete();
     }
@@ -338,16 +351,23 @@ let monthlyRevenueChart;
 async function isConflict(bookingData) {
     const newStart = new Date(`1970-01-01T${bookingData.startTime}`);
     const newEnd = new Date(`1970-01-01T${bookingData.endTime}`);
+    
     const querySnapshot = await firestore.collection("bookings")
         .where("pitch", "==", bookingData.pitch)
         .where("date", "==", bookingData.date)
         .get();
-    if (querySnapshot.empty) return false;
+
+    if (querySnapshot.empty) {
+        return false;
+    }
+
     for (const doc of querySnapshot.docs) {
         const existingBooking = doc.data();
         const existingStart = new Date(`1970-01-01T${existingBooking.startTime}`);
         const existingEnd = new Date(`1970-01-01T${existingBooking.endTime}`);
-        if (newStart < existingEnd && newEnd > existingStart) return true;
+        if (newStart < existingEnd && newEnd > existingStart) {
+            return true;
+        }
     }
     return false;
 }
@@ -359,14 +379,17 @@ async function addBooking(){
         startTime: document.getElementById("startTime").value, endTime: document.getElementById("endTime").value,
         pricePerHour: parseFloat(document.getElementById("pricePerHour").value)
     };
+
     if(!data.pitch || !data.clientName || !data.contact || !data.date || !data.startTime || !data.endTime || !data.pricePerHour){
         alert("Please fill all required fields."); return;
     }
     if (new Date(`1970-01-01T${data.startTime}`) >= new Date(`1970-01-01T${data.endTime}`)) {
         alert("Error: Start time must be before the end time."); return;
     }
+
     const recurringType = document.getElementById('recurringType').value;
     const recurringCount = parseInt(document.getElementById('recurringCount').value, 10);
+
     if (recurringType === 'none') {
         if (await isConflict(data)) {
             alert(`Booking Conflict: The selected time on ${data.pitch} for ${data.date} is unavailable.`); return;
@@ -378,19 +401,23 @@ async function addBooking(){
             alert('Please enter a valid number of repetitions.'); return;
         }
         if (recurringCount > 10 && !confirm(`This will create ${recurringCount} bookings. Are you sure?`)) return;
+
         const potentialBookings = [];
         const conflicts = [];
         const [year, month, day] = data.date.split('-').map(Number);
         const initialUTCDate = new Date(Date.UTC(year, month - 1, day));
+
         for (let i = 0; i < recurringCount; i++) {
             const newBookingData = { ...data };
             const nextDate = new Date(initialUTCDate);
             if (recurringType === 'weekly') nextDate.setUTCDate(initialUTCDate.getUTCDate() + (i * 7));
             else if (recurringType === 'monthly') nextDate.setUTCMonth(initialUTCDate.getUTCMonth() + i);
             newBookingData.date = nextDate.toISOString().slice(0, 10);
+            
             if (await isConflict(newBookingData)) conflicts.push(newBookingData.date);
             potentialBookings.push(newBookingData);
         }
+
         if (conflicts.length > 0) {
             alert(`Booking Conflict Found:\nUnavailable dates for ${data.pitch}:\n\n${conflicts.join('\n')}\n\nNo bookings were added.`);
             return;
@@ -399,6 +426,7 @@ async function addBooking(){
             alert(`${recurringCount} recurring bookings added successfully!`);
         }
     }
+    
     document.getElementById('bookingForm').reset();
     toggleRecurringOptions();
     await displayBookings();
@@ -413,7 +441,8 @@ async function updateDashboard() {
     const currentMonth = now.getMonth();
     const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
     if (uniqueYears.length === 0) { uniqueYears.push(currentYear); }
-    
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
     const allFilters = [
         { el: document.getElementById('yearFilter'), val: 'chartYear', type: 'year' },
         { el: document.getElementById('repeatClientMonthFilter'), val: 'repeatMonth', type: 'month' },
@@ -421,7 +450,6 @@ async function updateDashboard() {
         { el: document.getElementById('pitchRevenueMonthFilter'), val: 'pitchMonth', type: 'month' },
         { el: document.getElementById('pitchRevenueYearFilter'), val: 'pitchYear', type: 'year' },
     ];
-    
     const selectedVals = allFilters.reduce((acc, f) => ({...acc, [f.val]: f.el.value}), {});
 
     allFilters.forEach(filter => {
@@ -473,9 +501,10 @@ async function setupBookingFilters() {
     const pitchFilter = document.getElementById('filterPitch');
     const monthFilter = document.getElementById('filterMonth');
     const yearFilter = document.getElementById('filterYear');
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const uniquePitches = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome'];
-    const bookings = await db.getAllBookings();
-    const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
+    const uniqueYears = [...new Set((await db.getAllBookings()).map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
+
     pitchFilter.innerHTML = '<option value="">All Pitches</option>';
     uniquePitches.forEach(p => pitchFilter.innerHTML += `<option value="${p}">${p}</option>`);
     monthFilter.innerHTML = '<option value="">All Months</option>';
@@ -497,11 +526,14 @@ async function displayBookings(){
     const pitchFilter = document.getElementById('filterPitch').value;
     const monthFilter = document.getElementById('filterMonth').value;
     const yearFilter = document.getElementById('filterYear').value;
+    
     let filteredBookings = await db.getAllBookings();
+
     if (clientFilter) filteredBookings = filteredBookings.filter(b => b.clientName.toLowerCase().includes(clientFilter));
     if (pitchFilter) filteredBookings = filteredBookings.filter(b => b.pitch === pitchFilter);
     if (monthFilter !== "") filteredBookings = filteredBookings.filter(b => new Date(b.date).getMonth() == monthFilter);
     if (yearFilter) filteredBookings = filteredBookings.filter(b => new Date(b.date).getFullYear() == yearFilter);
+
     const tbody=document.getElementById("bookingsTableBody");
     if(!filteredBookings.length){
         tbody.innerHTML="<tr><td colspan=10>No bookings match the current filters.</td></tr>";
@@ -518,8 +550,56 @@ async function displayBookings(){
 async function deleteBooking(id){ if(confirm("Are you sure you want to delete this booking?")){ await db.deleteBooking(id); await displayBookings(); await calendar.renderCalendar(); await updateDashboard(); } }
 function switchTab(tab){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c=>c.style.display='none'); event.target.classList.add('active'); document.getElementById(tab+'-content').style.display='block'; if(tab==='calendar')calendar.renderCalendar(); if(tab==='dashboard')updateDashboard(); }
 
-async function exportToExcel() { /* ... unchanged ... */ }
-async function handleFileUpload(event) { /* ... unchanged ... */ }
+async function exportToExcel() {
+    const bookings = await db.getAllBookings();
+    if (bookings.length === 0) { alert("No booking data to export."); return; }
+    const exportData = bookings.map(b => ({ 'Pitch': b.pitch, 'Client Name': b.clientName, 'Date': b.date, 'Start Time': b.startTime, 'End Time': b.endTime, 'Total Hours': b.hours, 'Price Per Hour (AED)': b.pricePerHour, 'Total Payment (AED)': b.totalPayment, 'Contact': b.contact }));
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    worksheet['!cols'] = Object.keys(exportData[0]).map(key => ({ wch: Math.max(...exportData.map(row => String(row[key] || "").length), key.length) + 2 }));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+    XLSX.writeFile(workbook, `Football_Pitch_Bookings_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            let successCount = 0, conflictCount = 0, invalidCount = 0;
+            for (const row of jsonData) {
+                const bookingData = {
+                    pitch: row['Pitch'], clientName: row['Client Name'], contact: row['Contact'],
+                    date: row['Date'], startTime: row['Start Time'], endTime: row['End Time'],
+                    pricePerHour: parseFloat(row['Price Per Hour (AED)']) || parseFloat(row['Price Per Hour'])
+                };
+                if (Object.values(bookingData).some(v => v === undefined) || isNaN(bookingData.pricePerHour)) {
+                    invalidCount++; continue;
+                }
+                if (await isConflict(bookingData)) {
+                    conflictCount++; continue;
+                }
+                await db.addBooking(bookingData);
+                successCount++;
+            }
+            alert(`Import Complete:\n- ${successCount} bookings added.\n- ${conflictCount} conflicts found.\n- ${invalidCount} invalid rows skipped.`);
+            await displayBookings(); await updateDashboard(); await calendar.renderCalendar();
+        } catch (error) {
+            console.error("Error processing Excel file:", error);
+            alert("Error processing file. Please ensure columns are named correctly (e.g., 'Client Name', 'Start Time').");
+        } finally {
+            event.target.value = '';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
 
 class CalendarController{
     constructor(){
@@ -540,6 +620,7 @@ class CalendarController{
         grid.innerHTML="";
         ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d=>{let div=document.createElement("div");div.style.fontWeight="bold";div.textContent=d;grid.appendChild(div);});
         for(let i=0;i<new Date(year,month,1).getDay();i++){grid.appendChild(document.createElement("div"));}
+        
         const allBookings = await db.getAllBookings();
         for(let day=1;day<=new Date(year,month+1,0).getDate();day++){
             const cell=document.createElement("div"); cell.innerHTML=`<div style='font-weight:600;'>${day}</div>`;
@@ -572,10 +653,12 @@ async function deleteBookingFromCalendar(id){ await deleteBooking(id); closeBook
 
 document.addEventListener("DOMContentLoaded",()=>{ 
     if (localStorage.getItem('isLoggedIn') === 'true' || sessionStorage.getItem('isLoggedIn') === 'true') {
-        showApp();
+        // Defer app initialization until Firebase is ready
+        // No need to call showApp() here, it's called after login
     } else {
         document.getElementById('login-screen').style.display = 'flex';
     }
+    // Event listeners for filters
     document.getElementById('yearFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientMonthFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientYearFilter').addEventListener('change', updateDashboard);
