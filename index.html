@@ -20,7 +20,6 @@
             min-height:100vh;
             padding:20px;
         }
-        /* All other CSS styles remain the same */
         .container { max-width:1400px; margin:0 auto; background:white; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.1); overflow:hidden; }
         .header { background:linear-gradient(135deg, #2c3e50, #34495e); color:white; padding:30px; text-align:center; position:relative; }
         .header h1 { font-size:2.5em; margin-bottom:10px; }
@@ -64,40 +63,240 @@
     </style>
 </head>
 <body>
-    <div id="login-screen"></div>
-    <div id="app-wrapper" style="display:none;"></div>
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>⚽ Login</h2>
+            <p style="color:#777; margin-bottom:25px;">EP Sports Booking System</p>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input id="username" type="text">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input id="password" type="password">
+            </div>
+            <div class="login-options">
+                <input type="checkbox" id="keepLoggedIn" style="width:auto;">
+                <label for="keepLoggedIn">Keep me logged in</label>
+            </div>
+            <button id="loginButton" class="btn">Login</button>
+            <p id="login-error">Invalid username or password.</p>
+        </div>
+    </div>
+
+    <div id="app-wrapper" style="display:none;">
+        <div class="container">
+            <div class="header">
+                <button id="signOutButton" class="header-btn signout-btn">Sign Out</button>
+                <h1>⚽ Football Pitch Booking System</h1>
+                <p>Manage your pitch rentals and track revenue</p>
+                <input type="file" id="importFile" style="display:none;" accept=".xlsx, .xls">
+                <button id="importButton" class="header-btn import-btn">📥 Import</button>
+                <button id="exportButton" class="header-btn export-btn">📊 Export</button>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="bookings">📋 Bookings</div>
+                <div class="tab" data-tab="dashboard">📊 Dashboard</div>
+                <div class="tab" data-tab="calendar">📅 Calendar</div>
+            </div>
+
+            <div class="content">
+                <div id="bookings-content" class="tab-content">
+                    <form id="bookingForm" class="booking-form">
+                        <h2>Add New Booking</h2>
+                        <div class="form-row">
+                            <div class="form-group"><label>Pitch *</label>
+                                <select id="pitch">
+                                    <option value="">Select</option>
+                                    <option>Fifa Pitch</option>
+                                    <option>Junior Football Pitch</option>
+                                    <option>Airdome</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Client *</label><input id="clientName"></div>
+                            <div class="form-group"><label>Contact *</label><input id="contact"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Date *</label><input type="date" id="bookingDate"></div>
+                            <div class="form-group"><label>Start *</label><input type="time" id="startTime"></div>
+                            <div class="form-group"><label>End *</label><input type="time" id="endTime"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Price/hr *</label><input type="number" id="pricePerHour"></div>
+                            <div class="form-group"><label>Total Hours</label><input id="totalHours" class="calculated-field" readonly></div>
+                            <div class="form-group"><label>Total Payment</label><input id="totalPayment" class="calculated-field" readonly></div>
+                        </div>
+                        <hr style="border:none; border-top:1px solid #eee; margin: 20px 0;">
+                        <div class="form-row">
+                             <div class="form-group">
+                                <label>Recurring</label>
+                                <select id="recurringType" onchange="toggleRecurringOptions()">
+                                    <option value="none">None</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="recurring-options" style="display:none;">
+                                <label>Repeat for how many times?</label>
+                                <input type="number" id="recurringCount" min="1" value="4">
+                            </div>
+                        </div>
+                        <button id="addBookingButton" class="btn" type="button">Add Booking(s)</button>
+                    </form>
+
+                    <div class="filter-bar">
+                        <div class="form-group">
+                            <label>Filter by Client Name</label>
+                            <input type="text" id="filterClientName" placeholder="Enter client name...">
+                        </div>
+                        <div class="form-group">
+                            <label>Filter by Pitch</label>
+                            <select id="filterPitch"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Filter by Month</label>
+                            <select id="filterMonth"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Filter by Year</label>
+                            <select id="filterYear"></select>
+                        </div>
+                        <button id="clearFiltersButton" class="btn">Clear</button>
+                    </div>
+
+                    <div class="booking-table"><table><thead><tr>
+                        <th>Pitch</th><th>Client</th><th>Date</th><th>Start</th><th>End</th><th>Hours</th><th>Rate</th><th>Total</th><th>Contact</th><th>Action</th>
+                    </tr></thead><tbody id="bookingsTableBody"></tbody></table></div>
+                </div>
+
+                <div id="dashboard-content" class="tab-content" style="display:none;">
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card"><div class="card-title">Total Revenue</div><div class="metric"><div id="totalRevenue" class="metric-value">AED 0.00</div></div></div>
+                        <div class="dashboard-card"><div class="card-title">This Month's Revenue</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0.00</div></div></div>
+                        <div class="dashboard-card"><div class="card-title">This Year's Revenue</div><div class="metric"><div id="yearlyRevenue" class="metric-value">AED 0.00</div></div></div>
+                        <div class="dashboard-card"><div class="card-title">Total Bookings</div><div class="metric"><div id="totalBookingsCount" class="metric-value">0</div></div></div>
+                        <div class="dashboard-card">
+                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div class="card-title" style="margin-bottom: 0;">Revenue by Pitch</div>
+                                <div style="display: flex; gap: 10px;">
+                                    <select id="pitchRevenueMonthFilter"></select>
+                                    <select id="pitchRevenueYearFilter"></select>
+                                </div>
+                            </div>
+                            <div id="pitchRevenueBreakdown"><div class="empty-state">No revenue data.</div></div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div class="card-title" style="margin-bottom: 0;">Repeat Client Revenue</div>
+                                <div style="display: flex; gap: 10px;">
+                                    <select id="repeatClientMonthFilter"></select>
+                                    <select id="repeatClientYearFilter"></select>
+                                </div>
+                            </div>
+                            <div id="repeatClientRevenue"><div class="empty-state">No repeat clients for this period.</div></div>
+                        </div>
+                        <div class="dashboard-card" style="grid-column: 1 / -1; min-height: 400px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div class="card-title" style="margin-bottom: 0;">Monthly Revenue Breakdown</div>
+                                <select id="yearFilter"></select>
+                            </div>
+                            <div style="position: relative; height: 320px;">
+                                <canvas id="monthlyRevenueChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="calendar-content" class="tab-content" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <button id="prevMonthBtn" class="btn">⬅ Prev</button>
+                        <h2 id="calendarMonth"></h2>
+                        <button id="nextMonthBtn" class="btn">Next ➡</button>
+                        <button id="todayBtn" class="btn">Today</button>
+                    </div>
+                    <div id="calendarGrid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="bookingDetailsPanel" style="display:none; position:fixed; top:0; right:0; width:350px; height:100%; background:white; box-shadow:-5px 0 15px rgba(0,0,0,0.2); padding:20px; overflow-y:auto; z-index:1000;">
+            <button id="detailsCloseBtn" style="background:#dc3545; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">✖ Close</button>
+            <h3 style="margin:15px 0;">Booking Details</h3>
+            <div id="bookingDetailsContent"></div>
+        </div>
+    </div>
 
 <script>
 // WRAP ENTIRE SCRIPT IN DOMCONTENTLOADED TO PREVENT RACE CONDITIONS
 document.addEventListener("DOMContentLoaded", () => {
     
+    // --- START: FIREBASE SETUP ---
     let firestore;
-    if (typeof firebaseConfig !== 'undefined' && firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("PASTE_YOUR")) {
-        try {
+    try {
+        if (typeof firebaseConfig !== 'undefined' && firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("PASTE_YOUR")) {
             firebase.initializeApp(firebaseConfig);
             firestore = firebase.firestore();
-        } catch (e) {
-            console.error("Firebase initialization failed:", e);
-            document.body.innerHTML = `<h1>Error initializing Firebase. Check console for details.</h1>`;
-            return;
+        } else {
+            throw new Error("Firebase config object not found or is invalid.");
         }
-    } else {
-        console.error("Firebase config object not found or is invalid.");
-        document.body.innerHTML = '<h1>Firebase configuration is missing or invalid. Please set up `firebase-config.js`.</h1>';
-        return;
+    } catch (error) {
+        console.error("Firebase initialization failed:", error);
+        document.body.innerHTML = `<h1>Error: Could not initialize Firebase. Please ensure firebase-config.js is correct and Firebase SDKs are loaded.</h1>`;
+        return; // Stop script execution
     }
+    // --- END: FIREBASE SETUP ---
 
+    // --- GLOBAL VARIABLES & CONSTANTS ---
     let inactivityTimer;
     let monthlyRevenueChart;
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-    function handleLogin() { /* ... unchanged ... */ }
-    function signOut() { /* ... unchanged ... */ }
-    function resetInactivityTimer() { /* ... unchanged ... */ }
-    async function showApp() { /* ... unchanged ... */ }
+    // --- AUTHENTICATION & SESSION MANAGEMENT ---
+    function handleLogin() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        const keepLoggedIn = document.getElementById('keepLoggedIn').checked;
+        const errorEl = document.getElementById('login-error');
+        if (user === "EPsports2025" && pass === "EPsport@25") {
+            const storage = keepLoggedIn ? localStorage : sessionStorage;
+            storage.setItem('isLoggedIn', 'true');
+            errorEl.style.display = 'none';
+            showApp();
+        } else {
+            errorEl.style.display = 'block';
+        }
+    }
 
+    function signOut() {
+        sessionStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('isLoggedIn');
+        location.reload();
+    }
+
+    function resetInactivityTimer() {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(signOut, 3 * 60 * 60 * 1000);
+    }
+
+    async function showApp() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-wrapper').style.display = 'block';
+        await setupBookingFilters();
+        await displayBookings(); 
+        await calendar.renderCalendar(); 
+        await updateDashboard();
+        resetInactivityTimer();
+        ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(event => 
+            window.addEventListener(event, resetInactivityTimer)
+        );
+    }
+
+    // --- DATABASE CLASS ---
     class FirebaseDB {
-        constructor() { this.bookingsCollection = firestore.collection("bookings"); }
+        constructor() {
+            this.bookingsCollection = firestore.collection("bookings");
+        }
         async getAllBookings() {
             const snapshot = await this.bookingsCollection.orderBy("date").get();
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -108,11 +307,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const docRef = await this.bookingsCollection.add(newBooking);
             return { id: docRef.id, ...newBooking };
         }
-        async deleteBooking(id) { await this.bookingsCollection.doc(id).delete(); }
+        async deleteBooking(id) {
+            await this.bookingsCollection.doc(id).delete();
+        }
     }
     const db = new FirebaseDB();
 
-    function toggleRecurringOptions() { /* ... unchanged ... */ }
+    // --- CORE BOOKING LOGIC ---
+    function toggleRecurringOptions() {
+        const type = document.getElementById('recurringType').value;
+        document.getElementById('recurring-options').style.display = (type === 'none') ? 'none' : 'block';
+    }
     
     async function isConflict(bookingData) {
         try {
@@ -133,7 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             console.error("Error checking for conflicts:", error);
             alert("Could not check for booking conflicts. This might be due to missing database indexes. Please check the Firebase console.");
-            return true; // Assume conflict on error to prevent double booking
+            return true;
         }
     }
 
@@ -201,37 +406,112 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function deleteBooking(id){ if(confirm("Are you sure you want to delete this booking?")){ await db.deleteBooking(id); await displayBookings(); await calendar.renderCalendar(); await updateDashboard(); } }
 
-    async function updateDashboard() { /* ... unchanged ... */ }
-    async function setupBookingFilters() { /* ... unchanged ... */ }
-    function clearBookingFilters() { /* ... unchanged ... */ }
+    // --- UI DISPLAY & UPDATE FUNCTIONS ---
+    async function updateDashboard() {
+        const bookings = await db.getAllBookings();
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
+        if (uniqueYears.length === 0) { uniqueYears.push(currentYear); }
+        
+        const allFilters = [
+            { el: document.getElementById('yearFilter'), val: 'chartYear', type: 'year' },
+            { el: document.getElementById('repeatClientMonthFilter'), val: 'repeatMonth', type: 'month' },
+            { el: document.getElementById('repeatClientYearFilter'), val: 'repeatYear', type: 'year' },
+            { el: document.getElementById('pitchRevenueMonthFilter'), val: 'pitchMonth', type: 'month' },
+            { el: document.getElementById('pitchRevenueYearFilter'), val: 'pitchYear', type: 'year' },
+        ];
+        
+        const selectedVals = allFilters.reduce((acc, f) => ({...acc, [f.val]: f.el.value}), {});
+
+        allFilters.forEach(filter => {
+            if (filter.type === 'month' && filter.el.options.length === 0) {
+                monthNames.forEach((month, index) => filter.el.innerHTML += `<option value="${index}">${month}</option>`);
+            } else if (filter.type === 'year') {
+                filter.el.innerHTML = '';
+                uniqueYears.forEach(year => filter.el.innerHTML += `<option value="${year}">${year}</option>`);
+            }
+        });
+
+        document.getElementById('yearFilter').value = selectedVals.chartYear && uniqueYears.includes(parseInt(selectedVals.chartYear)) ? selectedVals.chartYear : uniqueYears[0];
+        document.getElementById('repeatClientMonthFilter').value = selectedVals.repeatMonth || currentMonth;
+        document.getElementById('repeatClientYearFilter').value = selectedVals.repeatYear && uniqueYears.includes(parseInt(selectedVals.repeatYear)) ? selectedVals.repeatYear : currentYear;
+        document.getElementById('pitchRevenueMonthFilter').value = selectedVals.pitchMonth || currentMonth;
+        document.getElementById('pitchRevenueYearFilter').value = selectedVals.pitchYear && uniqueYears.includes(parseInt(selectedVals.pitchYear)) ? selectedVals.pitchYear : currentYear;
+        
+        document.getElementById('totalRevenue').textContent = `AED ${bookings.reduce((s, b) => s + b.totalPayment, 0).toFixed(2)}`;
+        document.getElementById('monthlyRevenue').textContent = `AED ${bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; }).reduce((s, b) => s + b.totalPayment, 0).toFixed(2)}`;
+        document.getElementById('yearlyRevenue').textContent = `AED ${bookings.filter(b => new Date(b.date).getFullYear() === currentYear).reduce((s, b) => s + b.totalPayment, 0).toFixed(2)}`;
+        document.getElementById('totalBookingsCount').textContent = bookings.length;
+
+        const yearForPitch = parseInt(document.getElementById('pitchRevenueYearFilter').value);
+        const monthForPitch = parseInt(document.getElementById('pitchRevenueMonthFilter').value);
+        const filteredForPitch = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === yearForPitch && d.getMonth() === monthForPitch; });
+        const pitchRevenue = filteredForPitch.reduce((acc, b) => { acc[b.pitch] = (acc[b.pitch] || 0) + b.totalPayment; return acc; }, {});
+        document.getElementById('pitchRevenueBreakdown').innerHTML = Object.keys(pitchRevenue).length === 0 ? `<div class="empty-state">No revenue data for this period.</div>` : Object.entries(pitchRevenue).map(([pitch, revenue]) => `<div style="padding: 6px 0; display:flex; justify-content:space-between; border-bottom: 1px solid #eee;"><strong>${pitch}:</strong> <span>AED ${revenue.toFixed(2)}</span></div>`).join('');
+
+        const yearForRepeat = parseInt(document.getElementById('repeatClientYearFilter').value);
+        const monthForRepeat = parseInt(document.getElementById('repeatClientMonthFilter').value);
+        const filteredForRepeat = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === yearForRepeat && d.getMonth() === monthForRepeat; });
+        const bookingsByClient = filteredForRepeat.reduce((acc, b) => { acc[b.clientName] = acc[b.clientName] || []; acc[b.clientName].push(b); return acc; }, {});
+        const repeatClientRevenue = Object.entries(bookingsByClient).filter(([, b]) => b.length > 1).reduce((acc, [name, b]) => { acc[name] = b.reduce((s, i) => s + i.totalPayment, 0); return acc; }, {});
+        document.getElementById('repeatClientRevenue').innerHTML = Object.keys(repeatClientRevenue).length === 0 ? `<div class="empty-state">No repeat clients for this period.</div>` : Object.entries(repeatClientRevenue).sort(([, a], [, b]) => b - a).map(([c, r]) => `<div style="padding: 6px 0; display:flex; justify-content:space-between; border-bottom: 1px solid #eee;"><strong>${c}:</strong> <span>AED ${r.toFixed(2)}</span></div>`).join('');
+
+        const selectedYearForChart = parseInt(document.getElementById('yearFilter').value);
+        const monthlyData = Array(12).fill(0);
+        bookings.filter(b => new Date(b.date).getFullYear() === selectedYearForChart).forEach(b => { monthlyData[new Date(b.date).getMonth()] += b.totalPayment; });
+        
+        const chartCtx = document.getElementById('monthlyRevenueChart').getContext('2d');
+        if (monthlyRevenueChart) {
+            monthlyRevenueChart.data.datasets[0].data = monthlyData;
+            monthlyRevenueChart.update();
+        } else {
+            monthlyRevenueChart = new Chart(chartCtx, { type: 'bar', data: { labels: monthNames.map(m => m.slice(0,3)), datasets: [{ label: `Revenue for ${selectedYearForChart}`, data: monthlyData, backgroundColor: 'rgba(102, 126, 234, 0.6)', borderColor: 'rgba(102, 126, 234, 1)', borderWidth: 1, borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: value => `AED ${value}` } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` Revenue: AED ${context.raw.toFixed(2)}` } } } } });
+        }
+    }
+
+    async function setupBookingFilters() {
+        const pitchFilter = document.getElementById('filterPitch');
+        const monthFilter = document.getElementById('filterMonth');
+        const yearFilter = document.getElementById('filterYear');
+        const uniquePitches = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome'];
+        const bookings = await db.getAllBookings();
+        const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
+        pitchFilter.innerHTML = '<option value="">All Pitches</option>';
+        uniquePitches.forEach(p => pitchFilter.innerHTML += `<option value="${p}">${p}</option>`);
+        monthFilter.innerHTML = '<option value="">All Months</option>';
+        monthNames.forEach((m, i) => monthFilter.innerHTML += `<option value="${i}">${m}</option>`);
+        yearFilter.innerHTML = '<option value="">All Years</option>';
+        uniqueYears.forEach(y => yearFilter.innerHTML += `<option value="${y}">${y}</option>`);
+    }
+
+    function clearBookingFilters() {
+        document.getElementById('filterClientName').value = '';
+        document.getElementById('filterPitch').value = '';
+        document.getElementById('filterMonth').value = '';
+        document.getElementById('filterYear').value = '';
+        displayBookings();
+    }
 
     async function displayBookings(){
         const clientFilter = document.getElementById('filterClientName').value.toLowerCase();
         const pitchFilter = document.getElementById('filterPitch').value;
         const monthFilter = document.getElementById('filterMonth').value;
         const yearFilter = document.getElementById('filterYear').value;
-        
         let filteredBookings = await db.getAllBookings();
 
-        if (clientFilter) {
-            filteredBookings = filteredBookings.filter(b => b.clientName.toLowerCase().includes(clientFilter));
-        }
-        if (pitchFilter !== "") {
-            filteredBookings = filteredBookings.filter(b => b.pitch === pitchFilter);
-        }
-        if (monthFilter !== "") {
-            filteredBookings = filteredBookings.filter(b => new Date(b.date).getMonth() == monthFilter);
-        }
-        if (yearFilter !== "") {
-            filteredBookings = filteredBookings.filter(b => new Date(b.date).getFullYear() == yearFilter);
-        }
+        if (clientFilter !== "") filteredBookings = filteredBookings.filter(b => b.clientName.toLowerCase().includes(clientFilter));
+        if (pitchFilter !== "") filteredBookings = filteredBookings.filter(b => b.pitch === pitchFilter);
+        if (monthFilter !== "") filteredBookings = filteredBookings.filter(b => new Date(b.date).getMonth() == monthFilter);
+        if (yearFilter !== "") filteredBookings = filteredBookings.filter(b => new Date(b.date).getFullYear() == yearFilter);
 
-        const tbody=document.getElementById("bookingsTableBody");
+        const tbody = document.getElementById("bookingsTableBody");
         if(!filteredBookings.length){
             tbody.innerHTML="<tr><td colspan=10>No bookings match the current filters.</td></tr>";
             return;
         }
-        tbody.innerHTML=filteredBookings.map(b=>`
+        tbody.innerHTML = filteredBookings.map(b=>`
             <tr>
                 <td>${b.pitch}</td><td>${b.clientName}</td><td>${b.date}</td><td>${b.startTime}</td>
                 <td>${b.endTime}</td><td>${b.hours.toFixed(2)}h</td><td>${b.pricePerHour.toFixed(2)}</td><td>${b.totalPayment.toFixed(2)}</td>
@@ -240,20 +520,161 @@ document.addEventListener("DOMContentLoaded", () => {
             </tr>`).join("");
     }
     
-    function switchTab(tabName){ /* ... unchanged ... */ }
-    async function exportToExcel() { /* ... unchanged ... */ }
-    async function handleFileUpload(event) { /* ... unchanged ... */ }
-    class CalendarController{ /* ... unchanged ... */ }
+    function switchTab(tabName){ 
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        const activeTab = document.querySelector(`.tab[data-tab='${tabName}']`);
+        if (activeTab) activeTab.classList.add('active');
+        const activeContent = document.getElementById(tabName + '-content');
+        if (activeContent) activeContent.style.display = 'block';
+        if(tabName === 'calendar') calendar.renderCalendar();
+        if(tabName === 'dashboard') updateDashboard();
+    }
+
+    async function exportToExcel() {
+        const bookings = await db.getAllBookings();
+        if (bookings.length === 0) { alert("No booking data to export."); return; }
+        const exportData = bookings.map(b => ({ 'Pitch': b.pitch, 'Client Name': b.clientName, 'Date': b.date, 'Start Time': b.startTime, 'End Time': b.endTime, 'Total Hours': b.hours, 'Price Per Hour (AED)': b.pricePerHour, 'Total Payment (AED)': b.totalPayment, 'Contact': b.contact }));
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        worksheet['!cols'] = Object.keys(exportData[0]).map(key => ({ wch: Math.max(...exportData.map(row => String(row[key] || "").length), key.length) + 2 }));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+        XLSX.writeFile(workbook, `Football_Pitch_Bookings_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+
+    async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                let successCount = 0, conflictCount = 0, invalidCount = 0;
+                for (const row of jsonData) {
+                    const bookingData = {
+                        pitch: row['Pitch'], clientName: row['Client Name'], contact: row['Contact'],
+                        date: row['Date'], startTime: row['Start Time'], endTime: row['End Time'],
+                        pricePerHour: parseFloat(row['Price Per Hour (AED)']) || parseFloat(row['Price Per Hour'])
+                    };
+                    if (Object.values(bookingData).some(v => v === undefined) || isNaN(bookingData.pricePerHour)) {
+                        invalidCount++; continue;
+                    }
+                    if (await isConflict(bookingData)) {
+                        conflictCount++; continue;
+                    }
+                    await db.addBooking(bookingData);
+                    successCount++;
+                }
+                alert(`Import Complete:\n- ${successCount} bookings added.\n- ${conflictCount} conflicts found.\n- ${invalidCount} invalid rows skipped.`);
+                await displayBookings(); await updateDashboard(); await calendar.renderCalendar();
+            } catch (error) {
+                console.error("Error processing Excel file:", error);
+                alert("Error processing file. Please ensure columns are named correctly (e.g., 'Client Name', 'Start Time').");
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    class CalendarController{
+        constructor(){
+            this.currentDate = new Date();
+            this.clientColorMap = new Map();
+        }
+        getClientColor(clientName) {
+            if (!this.clientColorMap.has(clientName)) {
+                const hue = Math.floor(Math.random() * 360);
+                this.clientColorMap.set(clientName, `hsl(${hue}, 75%, 50%)`);
+            }
+            return this.clientColorMap.get(clientName);
+        }
+        async renderCalendar(){
+            const year=this.currentDate.getFullYear(), month=this.currentDate.getMonth();
+            document.getElementById("calendarMonth").textContent=this.currentDate.toLocaleString('default',{month:'long',year:'numeric'});
+            const grid=document.getElementById("calendarGrid");
+            grid.innerHTML="";
+            ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d=>{let div=document.createElement("div");div.style.fontWeight="bold";div.textContent=d;grid.appendChild(div);});
+            for(let i=0;i<new Date(year,month,1).getDay();i++){grid.appendChild(document.createElement("div"));}
+            const allBookings = await db.getAllBookings();
+            for(let day=1;day<=new Date(year,month+1,0).getDate();day++){
+                const cell=document.createElement("div"); cell.innerHTML=`<div style='font-weight:600;'>${day}</div>`;
+                const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                allBookings.filter(b=>b.date===dateStr).forEach(b=>{
+                    const div=document.createElement("div");
+                    div.style.cssText=`background-color:${this.getClientColor(b.clientName)};color:white;padding:2px 4px;margin:2px 0;border-radius:4px;cursor:pointer;font-size:12px`;
+                    div.textContent=`${b.startTime}-${b.endTime} ${b.clientName}`;
+                    div.onclick=()=>this.showBookingDetails(b);
+                });
+                grid.appendChild(cell);
+            }
+        }
+        navigateMonth(d){ this.currentDate.setMonth(this.currentDate.getMonth()+d); this.renderCalendar(); }
+        goToToday(){ this.currentDate=new Date(); this.renderCalendar(); }
+        showBookingDetails(b){
+            document.getElementById("bookingDetailsContent").innerHTML=`
+                <p><b>Pitch:</b> ${b.pitch}</p><p><b>Client:</b> ${b.clientName}</p><p><b>Contact:</b> ${b.contact}</p>
+                <p><b>Date:</b> ${b.date}</p><p><b>Time:</b> ${b.startTime}-${b.endTime}</p>
+                <p><b>Total Hours:</b> ${b.hours.toFixed(2)}</p><p><b>Total:</b> AED ${b.totalPayment.toFixed(2)}</p>
+                <hr><button id="detailsDeleteBtn" data-id="${b.id}" style="background:#dc3545;color:white;padding:10px;border:none;border-radius:5px;">Delete</button>`;
+            document.getElementById("bookingDetailsPanel").style.display="block";
+        }
+    }
     const calendar = new CalendarController();
     
+    // --- INITIAL APP STARTUP & EVENT LISTENERS ---
     if (localStorage.getItem('isLoggedIn') === 'true' || sessionStorage.getItem('isLoggedIn') === 'true') {
         showApp();
     } else {
         document.getElementById('login-screen').style.display = 'flex';
     }
     
-    // Attach all event listeners using JavaScript
-    // ... all event listeners are the same as the previous correct version ...
+    document.getElementById('loginButton').addEventListener('click', handleLogin);
+    document.getElementById('password').addEventListener('keypress', e => { if (e.key === 'Enter') handleLogin(); });
+    document.getElementById('signOutButton').addEventListener('click', signOut);
+    document.getElementById('importButton').addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('importFile').addEventListener('change', handleFileUpload);
+    document.getElementById('exportButton').addEventListener('click', exportToExcel);
+
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
+    document.getElementById('yearFilter').addEventListener('change', updateDashboard);
+    document.getElementById('repeatClientMonthFilter').addEventListener('change', updateDashboard);
+    document.getElementById('repeatClientYearFilter').addEventListener('change', updateDashboard);
+    document.getElementById('pitchRevenueMonthFilter').addEventListener('change', updateDashboard);
+    document.getElementById('pitchRevenueYearFilter').addEventListener('change', updateDashboard);
+    
+    document.getElementById('filterClientName').addEventListener('input', displayBookings);
+    document.getElementById('filterPitch').addEventListener('change', displayBookings);
+    document.getElementById('filterMonth').addEventListener('change', displayBookings);
+    document.getElementById('filterYear').addEventListener('change', displayBookings);
+    document.getElementById('addBookingButton').addEventListener('click', addBooking);
+    document.getElementById('clearFiltersButton').addEventListener('click', clearBookingFilters);
+
+    document.getElementById('prevMonthBtn').addEventListener('click', () => calendar.navigateMonth(-1));
+    document.getElementById('nextMonthBtn').addEventListener('click', () => calendar.navigateMonth(1));
+    document.getElementById('todayBtn').addEventListener('click', () => calendar.goToToday());
+    
+    document.getElementById('bookingsTableBody').addEventListener('click', e => {
+        if (e.target && e.target.classList.contains('delete-btn')) {
+            deleteBooking(e.target.dataset.id);
+        }
+    });
+
+    document.getElementById('bookingDetailsContent').addEventListener('click', e => {
+        if (e.target && e.target.id === 'detailsDeleteBtn') {
+            const id = e.target.dataset.id;
+            document.getElementById('bookingDetailsPanel').style.display = 'none';
+            deleteBooking(id);
+        }
+    });
+    
+    document.getElementById('detailsCloseBtn').addEventListener('click', () => document.getElementById('bookingDetailsPanel').style.display = 'none');
 });
 </script>
 </body>
