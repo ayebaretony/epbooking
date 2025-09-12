@@ -131,7 +131,7 @@
                         <div class="form-row">
                              <div class="form-group">
                                 <label>Recurring</label>
-                                <select id="recurringType" onchange="toggleRecurringOptions()">
+                                <select id="recurringType">
                                     <option value="none">None</option>
                                     <option value="weekly">Weekly</option>
                                     <option value="monthly">Monthly</option>
@@ -228,7 +228,6 @@
     </div>
 
 <script>
-// WRAP ENTIRE SCRIPT IN DOMCONTENTLOADED TO PREVENT RACE CONDITIONS
 document.addEventListener("DOMContentLoaded", () => {
     
     // --- START: FIREBASE SETUP ---
@@ -243,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
         console.error("Firebase initialization failed:", error);
         document.body.innerHTML = `<h1>Error: Could not initialize Firebase. Please ensure firebase-config.js is correct and Firebase SDKs are loaded.</h1>`;
-        return; // Stop script execution
+        return;
     }
     // --- END: FIREBASE SETUP ---
 
@@ -294,9 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- DATABASE CLASS ---
     class FirebaseDB {
-        constructor() {
-            this.bookingsCollection = firestore.collection("bookings");
-        }
+        constructor() { this.bookingsCollection = firestore.collection("bookings"); }
         async getAllBookings() {
             const snapshot = await this.bookingsCollection.orderBy("date").get();
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -307,9 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const docRef = await this.bookingsCollection.add(newBooking);
             return { id: docRef.id, ...newBooking };
         }
-        async deleteBooking(id) {
-            await this.bookingsCollection.doc(id).delete();
-        }
+        async deleteBooking(id) { await this.bookingsCollection.doc(id).delete(); }
     }
     const db = new FirebaseDB();
 
@@ -337,8 +332,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return false;
         } catch (error) {
             console.error("Error checking for conflicts:", error);
-            alert("Could not check for booking conflicts. This might be due to missing database indexes. Please check the Firebase console.");
-            return true;
+            alert("Could not check for booking conflicts. This might be due to missing database indexes. Please go to the Firebase console, select Firestore -> Indexes, and create a composite index for the 'bookings' collection with 'pitch' (Ascending) and 'date' (Ascending).");
+            return true; // Assume conflict on error to prevent double booking
         }
     }
 
@@ -374,7 +369,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const conflicts = [];
                 const [year, month, day] = data.date.split('-').map(Number);
                 const initialUTCDate = new Date(Date.UTC(year, month - 1, day));
-
                 for (let i = 0; i < recurringCount; i++) {
                     const newBookingData = { ...data };
                     const nextDate = new Date(initialUTCDate);
@@ -384,7 +378,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (await isConflict(newBookingData)) conflicts.push(newBookingData.date);
                     potentialBookings.push(newBookingData);
                 }
-
                 if (conflicts.length > 0) {
                     alert(`Booking Conflict Found:\nUnavailable dates for ${data.pitch}:\n\n${conflicts.join('\n')}\n\nNo bookings were added.`);
                     return;
@@ -642,6 +635,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
+
+    document.getElementById('recurringType').addEventListener('change', toggleRecurringOptions);
 
     document.getElementById('yearFilter').addEventListener('change', updateDashboard);
     document.getElementById('repeatClientMonthFilter').addEventListener('change', updateDashboard);
