@@ -334,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return false;
         } catch (error) {
             console.error("Error checking for conflicts:", error);
-            alert("Could not check for booking conflicts. This might be due to missing database indexes. Please go to the Firebase console, select Firestore -> Indexes, and create a composite index for the 'bookings' collection with 'pitch' (Ascending) and 'date' (Ascending).");
+            alert("Could not check for booking conflicts. This might be due to missing database indexes.");
             return true;
         }
     }
