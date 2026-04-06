@@ -114,6 +114,7 @@
                                     <option>Fifa Pitch</option>
                                     <option>Junior Football Pitch</option>
                                     <option>Airdome</option>
+                                    <option>Half Pitch</option>
                                 </select>
                             </div>
                             <div class="form-group"><label>Client *</label><input id="clientName"></div>
@@ -466,7 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const pitchFilter = document.getElementById('filterPitch');
         const monthFilter = document.getElementById('filterMonth');
         const yearFilter = document.getElementById('filterYear');
-        const uniquePitches = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome'];
+        const uniquePitches = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome', 'Half Pitch'];
         const bookings = await db.getAllBookings();
         const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
         pitchFilter.innerHTML = '<option value="">All Pitches</option>';
