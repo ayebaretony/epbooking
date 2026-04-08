@@ -6,7 +6,6 @@
     <title>Football Pitch Booking System</title>
     
     <script src="firebase-config.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -16,63 +15,36 @@
     
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height:100vh;
-            padding:15px;
-        }
+        body { font-family:'Segoe UI', sans-serif; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height:100vh; padding:20px; }
         .container { max-width:1400px; margin:0 auto; background:white; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.1); overflow:hidden; }
-        
-        /* Header & Navigation */
-        .header { background:linear-gradient(135deg, #2c3e50, #34495e); color:white; padding:25px; text-align:center; position:relative; }
-        .header h1 { font-size:2.2em; margin-bottom:5px; }
-        .header-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 15px; }
+        .header { background:linear-gradient(135deg, #2c3e50, #34495e); color:white; padding:30px; text-align:center; position:relative; }
+        .header-controls { display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
         .header-btn { background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.3); color:white; padding:8px 16px; border-radius:25px; cursor:pointer; font-size:13px; font-weight:600; }
-        .signout-btn { background:#dc3545 !important; border:none; }
         .report-btn { background: #28a745 !important; border: none; }
-
-        .tabs { display:flex; background:#f8f9fa; border-bottom:3px solid #e9ecef; overflow-x: auto; }
-        .tab { flex:1; padding:18px; text-align:center; background:#e9ecef; cursor:pointer; font-weight:bold; min-width: 120px; }
+        .signout-btn { background:#dc3545 !important; border:none; }
+        .tabs { display:flex; background:#f8f9fa; border-bottom:3px solid #e9ecef; }
+        .tab { flex:1; padding:18px; text-align:center; background:#e9ecef; cursor:pointer; font-weight:bold; }
         .tab.active { background:white; color:#2c3e50; }
-        
-        /* Form & Filters */
-        .content { padding:20px; }
+        .content { padding:25px; }
         .booking-form, .filter-bar { background:#f8f9fa; padding:20px; border-radius:15px; margin-bottom:25px; border: 1px solid #eee; }
         .form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px; margin-bottom:15px; }
         .form-group { display:flex; flex-direction:column; }
         .form-group label { font-weight:600; margin-bottom:6px; font-size: 14px; }
-        .form-group input, .form-group select { padding:10px; border:2px solid #e9ecef; border-radius:10px; font-size: 14px; }
-        .calculated-field { background:#eee !important; font-weight:bold; }
-        .btn { padding:12px 20px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:25px; cursor:pointer; font-weight:600; width: 100%; transition: 0.3s; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-
-        /* Tables */
-        .table-container { width: 100%; overflow-x: auto; border-radius: 15px; }
-        .booking-table table { width:100%; border-collapse:collapse; min-width: 1000px; }
-        .booking-table th { background:#34495e; color:white; padding:15px; text-align: left; }
-        .booking-table td { padding:12px; border-bottom:1px solid #eee; font-size: 14px; }
-        .delete-btn { background:#dc3545; color:white; border:none; padding:6px 12px; border-radius:15px; cursor:pointer; font-size: 12px; }
-
-        /* Dashboard */
+        .form-group input, .form-group select { padding:10px; border:2px solid #e9ecef; border-radius:10px; }
+        .btn { padding:12px 20px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:25px; cursor:pointer; font-weight:600; transition: 0.3s; }
+        .booking-table { width: 100%; overflow-x: auto; border-radius: 15px; margin-top: 15px; }
+        table { width:100%; border-collapse:collapse; min-width: 900px; }
+        th { background:#34495e; color:white; padding:15px; text-align: left; }
+        td { padding:12px; border-bottom:1px solid #eee; font-size: 14px; }
         .dashboard-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
-        .dashboard-card { background:#fff; padding:20px; border-radius:15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
-        .metric { background:#667eea; color:white; border-radius:12px; padding:20px; text-align:center; }
+        .dashboard-card { background:#fff; padding:20px; border-radius:15px; border: 1px solid #eee; }
+        .metric { background:#667eea; color:white; border-radius:12px; padding:20px; text-align:center; margin-top: 10px; }
         .metric-value { font-size:1.8em; font-weight:bold; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .card-title { font-weight: bold; color: #2c3e50; }
-        .data-list { max-height: 200px; overflow-y: auto; }
-        .data-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
-
-        /* Calendar */
         #calendarGrid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
         #calendarGrid div { background:#fff; border:1px solid #eee; border-radius:8px; padding:6px; min-height:90px; }
-        .cal-event { color:white; padding:3px 6px; font-size:11px; border-radius:4px; margin-top:3px; cursor:pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-        /* Modals & Overlays */
-        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 5000; padding: 20px; }
-        .login-box { background: white; padding: 40px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center; }
-        #bookingDetailsPanel { position:fixed; top:0; right:0; width:100%; max-width:350px; height:100%; background:white; box-shadow:-5px 0 20px rgba(0,0,0,0.15); padding:25px; overflow-y:auto; z-index:4000; display:none; }
+        .cal-event { color:white; padding:3px 6px; font-size:11px; border-radius:4px; margin-top:3px; cursor:pointer; }
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 5000; }
+        .login-box { background: white; padding: 40px; border-radius: 20px; width: 400px; text-align: center; }
         #report-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 4500; }
     </style>
 </head>
@@ -80,27 +52,25 @@
 
     <div id="login-screen">
         <div class="login-box">
-            <h2 style="margin-bottom: 10px;">⚽ Welcome</h2>
-            <p style="color:#777; margin-bottom:25px;">Palace Sports Booking Portal</p>
-            <div class="form-group" style="text-align:left;"><label>Username</label><input id="username" type="text"></div>
+            <h2>⚽ Palace Sports</h2>
+            <div class="form-group" style="text-align:left; margin-top:20px;"><label>Username</label><input id="username" type="text"></div>
             <div class="form-group" style="text-align:left; margin-top:15px;"><label>Password</label><input id="password" type="password"></div>
-            <div style="margin: 20px 0; display: flex; align-items: center; gap: 10px;"><input type="checkbox" id="keepLoggedIn"><label for="keepLoggedIn">Keep me logged in</label></div>
-            <button id="loginButton" class="btn">Access System</button>
-            <p id="login-error" style="color:#dc3545; display:none; margin-top:15px; font-weight:600;">Invalid Credentials</p>
+            <button id="loginButton" class="btn" style="width:100%; margin-top:20px;">Login</button>
+            <p id="login-error" style="color:#dc3545; display:none; margin-top:10px;">Invalid Credentials</p>
         </div>
     </div>
 
     <div id="report-modal-overlay">
         <div class="modal-box" style="background:white; padding:35px; border-radius:20px; width: 400px;">
-            <h2 style="text-align:center; margin-bottom:20px;">📄 Performance Report</h2>
-            <div class="form-group"><label>Year</label><select id="reportYearSelect"></select></div>
+            <h2 style="text-align:center; margin-bottom:20px;">📄 AI Performance Report</h2>
+            <div class="form-group"><label>Select Year</label><select id="reportYearSelect"></select></div>
             <div class="form-row" style="margin-top:15px;">
                 <div class="form-group"><label>From</label><select id="reportStartMonth"></select></div>
                 <div class="form-group"><label>To</label><select id="reportEndMonth"></select></div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 25px;">
-                <button id="generateFinalReport" class="btn" style="background: #28a745;">Export PDF</button>
-                <button id="closeReportModal" class="btn" style="background: #6c757d;">Cancel</button>
+                <button id="generateFinalReport" class="btn" style="flex:1; background: #28a745;">Export PDF</button>
+                <button id="closeReportModal" class="btn" style="flex:1; background: #6c757d;">Cancel</button>
             </div>
         </div>
     </div>
@@ -108,11 +78,11 @@
     <div id="app-wrapper" style="display:none;">
         <div class="container">
             <div class="header">
-                <button id="signOutButton" class="header-btn signout-btn" style="position: absolute; left: 20px; top: 25px;">Sign Out</button>
-                <h1>⚽ Sports Manager</h1>
-                <p>Unified Booking & Revenue Analytics</p>
+                <button id="signOutButton" class="header-btn signout-btn" style="position:absolute; left:20px; top:25px;">Sign Out</button>
+                <h1>Football Pitch Booking System</h1>
                 <div class="header-controls">
                     <button id="reportButton" class="header-btn report-btn">📄 AI Report</button>
+                    <input type="file" id="importFile" style="display:none;" accept=".xlsx, .xls">
                     <button id="importButton" class="header-btn">📥 Import Data</button>
                     <button id="exportButton" class="header-btn">📊 Export Excel</button>
                 </div>
@@ -127,95 +97,58 @@
             <div class="content">
                 <div id="bookings-content" class="tab-content">
                     <form id="bookingForm" class="booking-form">
-                        <h3>Create New Entry</h3>
+                        <h3>New Booking</h3>
                         <div class="form-row">
-                            <div class="form-group"><label>Facility/Pitch *</label>
-                                <select id="pitch">
-                                    <option value="">Select Pitch</option>
-                                    <option>Fifa Pitch</option>
-                                    <option>Junior Football Pitch</option>
-                                    <option>Airdome</option>
-                                    <option>Half Pitch</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label>Client Name *</label><input id="clientName"></div>
-                            <div class="form-group"><label>Contact *</label><input id="contact"></div>
+                            <div class="form-group"><label>Pitch</label><select id="pitch"><option>Fifa Pitch</option><option>Junior Football Pitch</option><option>Airdome</option><option>Half Pitch</option></select></div>
+                            <div class="form-group"><label>Client</label><input id="clientName"></div>
+                            <div class="form-group"><label>Contact</label><input id="contact"></div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group"><label>Date *</label><input type="date" id="bookingDate"></div>
-                            <div class="form-group"><label>Start Time *</label><input type="time" id="startTime"></div>
-                            <div class="form-group"><label>End Time *</label><input type="time" id="endTime"></div>
+                            <div class="form-group"><label>Date</label><input type="date" id="bookingDate"></div>
+                            <div class="form-group"><label>Start</label><input type="time" id="startTime"></div>
+                            <div class="form-group"><label>End</label><input type="time" id="endTime"></div>
+                            <div class="form-group"><label>Rate (AED/hr)</label><input type="number" id="pricePerHour"></div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Rate (AED/hr) *</label><input type="number" id="pricePerHour"></div>
-                            <div class="form-group"><label>Recurring</label>
-                                <select id="recurringType">
-                                    <option value="none">None</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="recurring-options" style="display:none;">
-                                <label>Counter (Occurrences)</label>
-                                <input type="number" id="recurringCount" min="1" value="4">
-                            </div>
-                        </div>
-                        <button id="addBookingButton" class="btn" type="button">Confirm Booking(s)</button>
+                        <button id="addBookingButton" class="btn" type="button">Add Booking</button>
                     </form>
 
                     <div class="filter-bar">
                         <div class="form-row">
-                            <div class="form-group"><label>Search Client</label><input type="text" id="filterClientName"></div>
-                            <div class="form-group"><label>Pitch</label><select id="filterPitch"></select></div>
+                            <div class="form-group"><label>Client Name</label><input type="text" id="filterClientName"></div>
+                            <div class="form-group"><label>Pitch</label><select id="filterPitch"><option value="">All</option><option>Fifa Pitch</option><option>Junior Football Pitch</option><option>Airdome</option><option>Half Pitch</option></select></div>
                             <div class="form-group"><label>Month</label><select id="filterMonth"></select></div>
                             <div class="form-group"><label>Year</label><select id="filterYear"></select></div>
                         </div>
                         <button id="clearFiltersButton" class="btn" style="width: auto;">Reset Filters</button>
                     </div>
 
-                    <div class="table-container">
-                        <div class="booking-table">
-                            <table>
-                                <thead><tr><th>Pitch</th><th>Client</th><th>Date</th><th>Start</th><th>End</th><th>Total</th><th>Action</th></tr></thead>
-                                <tbody id="bookingsTableBody"></tbody>
-                            </table>
-                        </div>
+                    <div class="booking-table">
+                        <table>
+                            <thead><tr><th>Pitch</th><th>Client</th><th>Date</th><th>Start</th><th>End</th><th>Total</th><th>Action</th></tr></thead>
+                            <tbody id="bookingsTableBody"></tbody>
+                        </table>
                     </div>
                 </div>
 
                 <div id="dashboard-content" class="tab-content" style="display:none;">
                     <div class="dashboard-grid">
-                        <div class="dashboard-card"><div class="card-title">Total Revenue</div><div class="metric"><div id="totalRevenue" class="metric-value">AED 0</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">Monthly Revenue</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">Yearly Revenue</div><div class="metric"><div id="yearlyRevenue" class="metric-value">AED 0</div></div></div>
-                        
+                        <div class="dashboard-card"><div>Total Revenue</div><div class="metric"><div id="totalRevenue" class="metric-value">AED 0</div></div></div>
                         <div class="dashboard-card">
-                            <div class="card-header">
-                                <div class="card-title">Revenue by Pitch</div>
-                                <div style="display:flex; gap:5px;">
-                                    <select id="pitchRevenueMonthFilter" style="font-size:11px;"></select>
-                                    <select id="pitchRevenueYearFilter" style="font-size:11px;"></select>
-                                </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong>Pitch Revenue</strong>
+                                <div style="display:flex; gap:5px;"><select id="pitchRevenueMonthFilter" style="font-size:11px;"></select><select id="pitchRevenueYearFilter" style="font-size:11px;"></select></div>
                             </div>
-                            <div id="pitchRevenueBreakdown" class="data-list"></div>
+                            <div id="pitchRevenueBreakdown" style="margin-top:15px;"></div>
                         </div>
-
                         <div class="dashboard-card">
-                            <div class="card-header">
-                                <div class="card-title">Repeat Clients</div>
-                                <div style="display:flex; gap:5px;">
-                                    <select id="repeatClientMonthFilter" style="font-size:11px;"></select>
-                                    <select id="repeatClientYearFilter" style="font-size:11px;"></select>
-                                </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong>Repeat Clients</strong>
+                                <div style="display:flex; gap:5px;"><select id="repeatClientMonthFilter" style="font-size:11px;"></select><select id="repeatClientYearFilter" style="font-size:11px;"></select></div>
                             </div>
-                            <div id="repeatClientRevenue" class="data-list"></div>
+                            <div id="repeatClientRevenue" style="margin-top:15px;"></div>
                         </div>
-
                         <div class="dashboard-card" style="grid-column: 1 / -1; height: 350px;">
-                            <div class="card-header">
-                                <div class="card-title">Monthly Comparison</div>
-                                <select id="yearFilter" style="font-size:12px;"></select>
-                            </div>
+                            <div style="display:flex; justify-content:space-between;"><strong>Monthly Trend</strong><select id="yearFilter"></select></div>
                             <canvas id="monthlyRevenueChart"></canvas>
                         </div>
                     </div>
@@ -223,18 +156,13 @@
 
                 <div id="calendar-content" class="tab-content" style="display:none;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <button id="prevMonthBtn" class="btn" style="width:auto; border-radius:10px; padding:8px 15px;">⬅</button>
+                        <button id="prevMonthBtn" class="btn">⬅</button>
                         <h2 id="calendarMonth"></h2>
-                        <button id="nextMonthBtn" class="btn" style="width:auto; border-radius:10px; padding:8px 15px;">➡</button>
+                        <button id="nextMonthBtn" class="btn">➡</button>
                     </div>
                     <div id="calendarGrid"></div>
                 </div>
             </div>
-        </div>
-        
-        <div id="bookingDetailsPanel">
-            <button id="detailsCloseBtn" class="btn" style="background:#dc3545; margin-bottom: 25px;">✖ Close Panel</button>
-            <div id="bookingDetailsContent"></div>
         </div>
     </div>
 
@@ -244,20 +172,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     let monthlyRevenueChart;
 
-    // 1. Firebase Init
+    // Firebase Setup
     try {
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
             firebase.initializeApp(firebaseConfig);
             firestore = firebase.firestore();
         }
-    } catch (e) { console.error("Firebase fail", e); }
+    } catch (e) { console.error("Firebase Error", e); }
 
     class DB {
         constructor() { this.coll = firestore.collection("bookings"); }
-        async getAll() { 
-            const s = await this.coll.orderBy("date").get(); 
-            return s.docs.map(d => ({id: d.id, ...d.data()})); 
-        }
+        async getAll() { const s = await this.coll.orderBy("date").get(); return s.docs.map(d => ({id: d.id, ...d.data()})); }
         async add(data) {
             const h = (new Date(`1970-01-01T${data.endTime}`) - new Date(`1970-01-01T${data.startTime}`)) / 3600000;
             return await this.coll.add({...data, hours: h, totalPayment: h * data.pricePerHour});
@@ -266,91 +191,107 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const db = new DB();
 
-    // 2. Logic: Recurring Counter
-    document.getElementById('recurringType').onchange = (e) => {
-        document.getElementById('recurring-options').style.display = (e.target.value === 'none') ? 'none' : 'block';
+    // Reset Filters Function
+    window.clearBookingFilters = () => {
+        document.getElementById('filterClientName').value = '';
+        document.getElementById('filterPitch').value = '';
+        document.getElementById('filterMonth').value = '';
+        document.getElementById('filterYear').value = '';
+        drawTable();
     };
 
-    async function handleAdd() {
-        const data = {
-            pitch: document.getElementById('pitch').value, clientName: document.getElementById('clientName').value,
-            contact: document.getElementById('contact').value, date: document.getElementById('bookingDate').value,
-            startTime: document.getElementById('startTime').value, endTime: document.getElementById('endTime').value,
-            pricePerHour: parseFloat(document.getElementById('pricePerHour').value)
+    // Export Function
+    window.exportToExcel = async () => {
+        const bs = await db.getAll();
+        const ws = XLSX.utils.json_to_sheet(bs);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Bookings");
+        XLSX.writeFile(wb, "Palace_Sports_Data.xlsx");
+    };
+
+    // Import Function
+    document.getElementById('importButton').onclick = () => document.getElementById('importFile').click();
+    document.getElementById('importFile').onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const data = new Uint8Array(evt.target.result);
+            const wb = XLSX.read(data, {type: 'array'});
+            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+            for(let row of json) await db.add(row);
+            location.reload();
         };
-        if(!data.pitch || !data.date || !data.startTime || !data.endTime || isNaN(data.pricePerHour)) return alert("Required fields missing.");
+        reader.readAsArrayBuffer(file);
+    };
 
-        const type = document.getElementById('recurringType').value;
-        const count = parseInt(document.getElementById('recurringCount').value) || 1;
+    // AI Report Logic
+    document.getElementById('reportButton').onclick = async () => {
+        const bs = await db.getAll();
+        const years = [...new Set(bs.map(b => new Date(b.date).getFullYear()))].sort((a,b)=>b-a);
+        document.getElementById('reportYearSelect').innerHTML = (years.length ? years : [2026]).map(y=>`<option>${y}</option>`).join('');
+        document.getElementById('reportStartMonth').innerHTML = monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+        document.getElementById('reportEndMonth').innerHTML = monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+        document.getElementById('report-modal-overlay').style.display = 'flex';
+    };
 
-        if(type === 'none') {
-            await db.add(data);
-        } else {
-            const [y, m, d] = data.date.split('-').map(Number);
-            let start = new Date(Date.UTC(y, m-1, d));
-            for(let i=0; i<count; i++) {
-                const cur = new Date(start);
-                if(type === 'weekly') cur.setUTCDate(start.getUTCDate() + (i*7));
-                else cur.setUTCMonth(start.getUTCMonth() + i);
-                await db.add({...data, date: cur.toISOString().split('T')[0]});
-            }
-        }
-        location.reload();
-    }
+    document.getElementById('generateFinalReport').onclick = async () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const yr = parseInt(document.getElementById('reportYearSelect').value);
+        const start = parseInt(document.getElementById('reportStartMonth').value);
+        const end = parseInt(document.getElementById('reportEndMonth').value);
+        const all = await db.getAll();
+        const filtered = all.filter(b => { const d = new Date(b.date); return d.getFullYear()===yr && d.getMonth()>=start && d.getMonth()<=end; });
+        
+        doc.setFontSize(20); doc.text("Revenue Performance Report", 14, 20);
+        doc.setFontSize(12); doc.text(`Period: ${monthNames[start]} - ${monthNames[end]} ${yr}`, 14, 30);
+        const total = filtered.reduce((s,b)=>s+b.totalPayment,0);
+        doc.text(`Total Revenue: AED ${total.toLocaleString()}`, 14, 45);
+        
+        doc.autoTable({ startY: 55, head: [['Date', 'Pitch', 'Client', 'Amount']], body: filtered.map(b=>[b.date, b.pitch, b.clientName, b.totalPayment.toFixed(2)]) });
+        doc.save("Palace_Sports_Report.pdf");
+        document.getElementById('report-modal-overlay').style.display = 'none';
+    };
 
-    // 3. Logic: Dashboard Filters (Pitch & Repeat Client Revenue)
+    // Dashboard Logic
     async function updateDashboard() {
-        const bookings = await db.getAll();
+        const bs = await db.getAll();
         const now = new Date();
         const curY = now.getFullYear();
         const curM = now.getMonth();
 
-        // Populate Years
-        const years = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a,b)=>b-a);
-        if(!years.length) years.push(curY);
+        // Populate Filters
+        const years = [...new Set(bs.map(b => new Date(b.date).getFullYear()))].sort((a,b)=>b-a);
+        if(!years.length) years.push(2026);
         
-        const yFilters = ['yearFilter', 'pitchRevenueYearFilter', 'repeatClientYearFilter'];
-        const mFilters = ['pitchRevenueMonthFilter', 'repeatClientMonthFilter'];
-
-        yFilters.forEach(id => {
+        ['yearFilter', 'pitchRevenueYearFilter', 'repeatClientYearFilter'].forEach(id => {
             const el = document.getElementById(id);
-            if(!el.innerHTML) {
-                years.forEach(y => el.innerHTML += `<option value="${y}">${y}</option>`);
-                el.value = curY;
-            }
+            if(!el.innerHTML) { years.forEach(y => el.innerHTML += `<option value="${y}">${y}</option>`); el.value = curY; }
         });
-        mFilters.forEach(id => {
+        ['pitchRevenueMonthFilter', 'repeatClientMonthFilter'].forEach(id => {
             const el = document.getElementById(id);
-            if(!el.innerHTML) {
-                monthNames.forEach((m,i) => el.innerHTML += `<option value="${i}">${m}</option>`);
-                el.value = curM;
-            }
+            if(!el.innerHTML) { monthNames.forEach((m,i) => el.innerHTML += `<option value="${i}">${m}</option>`); el.value = curM; }
         });
 
-        // Top Metrics
-        document.getElementById('totalRevenue').textContent = `AED ${bookings.reduce((s,b)=>s+b.totalPayment,0).toLocaleString()}`;
-        document.getElementById('monthlyRevenue').textContent = `AED ${bookings.filter(b=>new Date(b.date).getMonth()===curM && new Date(b.date).getFullYear()===curY).reduce((s,b)=>s+b.totalPayment,0).toLocaleString()}`;
-        document.getElementById('yearlyRevenue').textContent = `AED ${bookings.filter(b=>new Date(b.date).getFullYear()===curY).reduce((s,b)=>s+b.totalPayment,0).toLocaleString()}`;
-
-        // Revenue by Pitch Logic
+        // Metrics
+        document.getElementById('totalRevenue').textContent = `AED ${bs.reduce((s,b)=>s+b.totalPayment,0).toLocaleString()}`;
+        
         const pY = parseInt(document.getElementById('pitchRevenueYearFilter').value);
         const pM = parseInt(document.getElementById('pitchRevenueMonthFilter').value);
-        const pData = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear()===pY && d.getMonth()===pM; });
+        const pData = bs.filter(b => { const d = new Date(b.date); return d.getFullYear()===pY && d.getMonth()===pM; });
         const pRev = pData.reduce((acc,b) => { acc[b.pitch] = (acc[b.pitch]||0) + b.totalPayment; return acc; }, {});
-        document.getElementById('pitchRevenueBreakdown').innerHTML = Object.entries(pRev).map(([p,r]) => `<div class="data-item"><strong>${p}</strong><span>AED ${r.toLocaleString()}</span></div>`).join('') || "No data";
+        document.getElementById('pitchRevenueBreakdown').innerHTML = Object.entries(pRev).map(([p,r])=>`<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee;"><b>${p}</b><span>AED ${r.toLocaleString()}</span></div>`).join('') || "No data";
 
-        // Repeat Client Revenue Logic
         const rY = parseInt(document.getElementById('repeatClientYearFilter').value);
         const rM = parseInt(document.getElementById('repeatClientMonthFilter').value);
-        const rData = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear()===rY && d.getMonth()===rM; });
+        const rData = bs.filter(b => { const d = new Date(b.date); return d.getFullYear()===rY && d.getMonth()===rM; });
         const cTotals = rData.reduce((acc,b) => { acc[b.clientName] = (acc[b.clientName]||0) + b.totalPayment; return acc; }, {});
-        const repeats = Object.entries(cTotals).filter(([name]) => rData.filter(b=>b.clientName===name).length > 1);
-        document.getElementById('repeatClientRevenue').innerHTML = repeats.map(([n,t]) => `<div class="data-item"><strong>${n}</strong><span>AED ${t.toLocaleString()}</span></div>`).join('') || "No repeat clients";
+        const repeats = Object.entries(cTotals).filter(([n]) => rData.filter(b=>b.clientName===n).length > 1);
+        document.getElementById('repeatClientRevenue').innerHTML = repeats.map(([n,t])=>`<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee;"><b>${n}</b><span>AED ${t.toLocaleString()}</span></div>`).join('') || "No repeat clients";
 
-        // Chart
         const selY = parseInt(document.getElementById('yearFilter').value);
         const cData = Array(12).fill(0);
-        bookings.filter(b=>new Date(b.date).getFullYear()===selY).forEach(b=> cData[new Date(b.date).getMonth()] += b.totalPayment);
+        bs.filter(b=>new Date(b.date).getFullYear()===selY).forEach(b=> cData[new Date(b.date).getMonth()] += b.totalPayment);
         if(monthlyRevenueChart) monthlyRevenueChart.destroy();
         monthlyRevenueChart = new Chart(document.getElementById('monthlyRevenueChart'), {
             type:'bar', data:{labels:monthNames.map(m=>m.slice(0,3)), datasets:[{label:'Revenue', data:cData, backgroundColor:'#667eea'}]},
@@ -358,112 +299,53 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 4. Calendar Logic: Colors & Deletion
-    const cal = {
-        cur: new Date(),
-        clrs: {},
-        getClr(n) { if(!this.clrs[n]) this.clrs[n]=`hsl(${Math.random()*360}, 65%, 50%)`; return this.clrs[n]; },
-        async render() {
-            const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
-            const m = this.cur.getMonth(), y = this.cur.getFullYear();
-            document.getElementById('calendarMonth').textContent = `${monthNames[m]} ${y}`;
-            const bs = await db.getAll();
-            for(let i=0; i<new Date(y, m, 1).getDay(); i++) grid.appendChild(document.createElement('div'));
-            for(let d=1; d<=new Date(y,m+1,0).getDate(); d++) {
-                const cell = document.createElement('div'); cell.innerHTML = `<b>${d}</b>`;
-                const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                bs.filter(b=>b.date===dStr).forEach(b => {
-                    const div = document.createElement('div'); div.className = 'cal-event';
-                    div.style.background = this.getClr(b.clientName);
-                    div.textContent = `${b.startTime} ${b.clientName}`;
-                    div.onclick = () => {
-                        document.getElementById('bookingDetailsContent').innerHTML = `
-                            <p><strong>Client:</strong> ${b.clientName}</p><p><strong>Pitch:</strong> ${b.pitch}</p>
-                            <p><strong>Time:</strong> ${b.startTime} - ${b.endTime}</p>
-                            <p><strong>Revenue:</strong> AED ${b.totalPayment.toFixed(2)}</p><hr style="margin:15px 0;">
-                            <button class="btn" style="background:#dc3545;" onclick="window.del('${b.id}')">Delete Entry</button>
-                        `;
-                        document.getElementById('bookingDetailsPanel').style.display = 'block';
-                    };
-                    cell.appendChild(div);
-                });
-                grid.appendChild(cell);
-            }
-        }
-    };
-
-    // 5. App Setup
-    window.del = async (id) => { if(confirm("Confirm Delete?")) { await db.delete(id); location.reload(); }};
-    document.getElementById('loginButton').onclick = () => {
-        if(document.getElementById('username').value === "EPsports2025" && document.getElementById('password').value === "EPsport@25") {
-            localStorage.setItem('isLoggedIn', 'true'); location.reload();
-        } else document.getElementById('login-error').style.display = 'block';
-    };
-
-    if(localStorage.getItem('isLoggedIn') === 'true') {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-wrapper').style.display = 'block';
-        
-        // Initial Filters
-        const ps = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome', 'Half Pitch'];
-        document.getElementById('filterPitch').innerHTML = '<option value="">All</option>' + ps.map(p=>`<option value="${p}">${p}</option>`).join('');
-        document.getElementById('filterMonth').innerHTML = '<option value="">All</option>' + monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
-        document.getElementById('filterYear').innerHTML = `<option value="">All</option><option value="2025">2025</option><option value="2026">2026</option>`;
-
-        // Tab Switching
-        document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
-            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-            document.querySelectorAll('.tab').forEach(tb => tb.classList.remove('active'));
-            document.getElementById(t.dataset.tab + '-content').style.display = 'block';
-            t.classList.add('active');
-            if(t.dataset.tab === 'calendar') cal.render();
-            if(t.dataset.tab === 'dashboard') updateDashboard();
+    // App Initialization
+    async function drawTable() {
+        const bs = await db.getAll();
+        const cF = document.getElementById('filterClientName').value.toLowerCase();
+        const pF = document.getElementById('filterPitch').value;
+        const mF = document.getElementById('filterMonth').value;
+        const yF = document.getElementById('filterYear').value;
+        const filtered = bs.filter(b => {
+            const d = new Date(b.date);
+            return (!cF || b.clientName.toLowerCase().includes(cF)) && (!pF || b.pitch === pF) && (!mF || d.getMonth()==mF) && (!yF || d.getFullYear()==yF);
         });
-
-        // Booking Display & Filter Events
-        const draw = async () => {
-            const bs = await db.getAll();
-            const cF = document.getElementById('filterClientName').value.toLowerCase();
-            const pF = document.getElementById('filterPitch').value;
-            const mF = document.getElementById('filterMonth').value;
-            const yF = document.getElementById('filterYear').value;
-
-            const filtered = bs.filter(b => {
-                const d = new Date(b.date);
-                return (!cF || b.clientName.toLowerCase().includes(cF)) &&
-                       (!pF || b.pitch === pF) &&
-                       (!mF || d.getMonth() == mF) &&
-                       (!yF || d.getFullYear() == yF);
-            });
-
-            document.getElementById('bookingsTableBody').innerHTML = filtered.map(b => `
-                <tr>
-                    <td>${b.pitch}</td><td>${b.clientName}</td><td>${b.date}</td><td>${b.startTime}</td><td>${b.endTime}</td>
-                    <td>AED ${b.totalPayment.toFixed(2)}</td>
-                    <td><button class="delete-btn" onclick="window.del('${b.id}')">Delete</button></td>
-                </tr>
-            `).join('');
-        };
-
-        document.getElementById('addBookingButton').onclick = handleAdd;
-        ['filterClientName','filterPitch','filterMonth','filterYear'].forEach(id => {
-            document.getElementById(id).onchange = draw;
-            if(id === 'filterClientName') document.getElementById(id).oninput = draw;
-        });
-        
-        // Dashboard Dynamic Listeners
-        ['yearFilter','pitchRevenueMonthFilter','pitchRevenueYearFilter','repeatClientMonthFilter','repeatClientYearFilter'].forEach(id => {
-            document.getElementById(id).onchange = updateDashboard;
-        });
-
-        draw(); updateDashboard();
+        document.getElementById('bookingsTableBody').innerHTML = filtered.map(b=>`<tr><td>${b.pitch}</td><td>${b.clientName}</td><td>${b.date}</td><td>${b.startTime}</td><td>${b.endTime}</td><td>AED ${b.totalPayment.toFixed(2)}</td><td><button class="btn" style="background:#dc3545; padding:5px 10px;" onclick="window.del('${b.id}')">Delete</button></td></tr>`).join('');
     }
 
-    // Calendar Navigation
-    document.getElementById('prevMonthBtn').onclick = () => { cal.cur.setMonth(cal.cur.getMonth()-1); cal.render(); };
-    document.getElementById('nextMonthBtn').onclick = () => { cal.cur.setMonth(cal.cur.getMonth()+1); cal.render(); };
+    window.del = async (id) => { if(confirm("Delete?")) { await db.delete(id); location.reload(); }};
+    document.getElementById('addBookingButton').onclick = async () => {
+        const data = { pitch: document.getElementById('pitch').value, clientName: document.getElementById('clientName').value, contact: document.getElementById('contact').value, date: document.getElementById('bookingDate').value, startTime: document.getElementById('startTime').value, endTime: document.getElementById('endTime').value, pricePerHour: parseFloat(document.getElementById('pricePerHour').value) };
+        await db.add(data); location.reload();
+    };
+
+    document.getElementById('loginButton').onclick = () => {
+        if(document.getElementById('username').value==="EPsports2025" && document.getElementById('password').value==="EPsport@25") { localStorage.setItem('isLoggedIn','true'); location.reload(); }
+        else document.getElementById('login-error').style.display='block';
+    };
+
+    if(localStorage.getItem('isLoggedIn')==='true') {
+        document.getElementById('login-screen').style.display='none';
+        document.getElementById('app-wrapper').style.display='block';
+        document.getElementById('filterMonth').innerHTML = '<option value="">All</option>' + monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+        document.getElementById('filterYear').innerHTML = '<option value="">All</option><option>2025</option><option>2026</option>';
+        drawTable(); updateDashboard();
+    }
+
+    document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('.tab').forEach(tb => tb.classList.remove('active'));
+        document.getElementById(t.dataset.tab + '-content').style.display = 'block';
+        t.classList.add('active');
+        if(t.dataset.tab === 'dashboard') updateDashboard();
+    });
+
+    ['filterClientName','filterPitch','filterMonth','filterYear'].forEach(id => document.getElementById(id).onchange = drawTable);
+    ['yearFilter','pitchRevenueMonthFilter','pitchRevenueYearFilter','repeatClientMonthFilter','repeatClientYearFilter'].forEach(id => document.getElementById(id).onchange = updateDashboard);
+    document.getElementById('exportButton').onclick = exportToExcel;
+    document.getElementById('clearFiltersButton').onclick = clearBookingFilters;
     document.getElementById('signOutButton').onclick = () => { localStorage.removeItem('isLoggedIn'); location.reload(); };
-    document.getElementById('detailsCloseBtn').onclick = () => document.getElementById('bookingDetailsPanel').style.display = 'none';
+    document.getElementById('closeReportModal').onclick = () => document.getElementById('report-modal-overlay').style.display = 'none';
 });
 </script>
 </body>
