@@ -27,13 +27,8 @@
         /* Responsive Header */
         .header { 
             background:linear-gradient(135deg, #2c3e50, #34495e); 
-            color:white; 
-            padding:20px; 
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-            text-align: center;
+            color:white; padding:20px; 
+            display: flex; flex-direction: column; gap: 15px; align-items: center; text-align: center;
         }
         .header-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
         .header h1 { font-size: 1.8em; }
@@ -44,7 +39,7 @@
         .signout-btn { background:#dc3545; border: none; }
         .report-btn { background: #28a745 !important; border: none; }
 
-        /* Tabs */
+        /* Navigation */
         .tabs { display:flex; background:#f8f9fa; border-bottom:3px solid #e9ecef; overflow-x: auto; }
         .tab { flex:1; padding:15px; text-align:center; background:#e9ecef; cursor:pointer; font-weight:bold; min-width: 100px; }
         .tab.active { background:white; color:#2c3e50; }
@@ -56,26 +51,30 @@
         .form-group label { font-weight:600; margin-bottom:6px; font-size: 14px; }
         .form-group input, .form-group select { padding:12px; border:2px solid #e9ecef; border-radius:10px; }
 
-        /* Tables */
+        /* Tables & Lists */
         .table-container { width: 100%; overflow-x: auto; border-radius: 15px; }
         .booking-table table { width:100%; border-collapse:collapse; min-width: 900px; }
         .booking-table th { background:#34495e; color:white; padding:12px; font-size: 14px; text-align: left; }
         .booking-table td { padding:10px; border-bottom:1px solid #eee; font-size: 13px; }
 
-        /* Dashboard */
-        .dashboard-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:15px; }
+        /* Dashboard Items */
+        .dashboard-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:15px; }
         .dashboard-card { background:#f9f9f9; padding:15px; border-radius:15px; border: 1px solid #eee; }
         .metric { background:#667eea; color:white; border-radius:10px; padding:15px; text-align:center; }
         .metric-value { font-size:1.5em; font-weight:bold; }
+        .card-title { font-weight: bold; margin-bottom: 10px; color: #2c3e50; }
         
-        /* Calendar */
+        /* Calendar UI */
         #calendarGrid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-        #calendarGrid div { background:#fff; border:1px solid #ddd; border-radius:8px; padding:4px; min-height:60px; font-size: 11px; }
+        #calendarGrid div { background:#fff; border:1px solid #ddd; border-radius:8px; padding:4px; min-height:80px; font-size: 11px; }
 
-        /* Login */
+        /* Login & Overlays */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 5000; padding: 15px; }
         .login-box { background: white; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center; }
         .btn { padding:12px 20px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:25px; cursor:pointer; font-weight:600; width: 100%; }
+        
+        #bookingDetailsPanel { position:fixed; top:0; right:0; width:100%; max-width:350px; height:100%; background:white; box-shadow:-5px 0 15px rgba(0,0,0,0.2); padding:20px; overflow-y:auto; z-index:3000; display:none; }
+        #report-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 4000; padding: 15px; }
         
         @media (min-width: 768px) {
             body { padding: 20px; }
@@ -84,10 +83,6 @@
             .header h1 { font-size: 2.2em; }
             .content { padding: 30px; }
         }
-
-        #bookingDetailsPanel { position:fixed; top:0; right:0; width:100%; max-width:350px; height:100%; background:white; box-shadow:-5px 0 15px rgba(0,0,0,0.2); padding:20px; overflow-y:auto; z-index:3000; display:none; }
-        #report-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 4000; padding: 15px; }
-        .modal-box { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 450px; }
     </style>
 </head>
 <body>
@@ -104,7 +99,7 @@
     </div>
 
     <div id="report-modal-overlay">
-        <div class="modal-box">
+        <div class="modal-box" style="background:white; padding:30px; border-radius:20px;">
             <h2 style="text-align:center; margin-bottom:15px;">📄 AI Performance Report</h2>
             <div class="form-group"><label>Select Year</label><select id="reportYearSelect"></select></div>
             <div class="form-row" style="margin-top:10px;">
@@ -160,8 +155,17 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>Price/hr *</label><input type="number" id="pricePerHour"></div>
-                            <div class="form-group"><label>Recurring</label><select id="recurringType"><option value="none">None</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
-                            <div class="form-group" id="recurring-options" style="display:none;"><label>Repetitions</label><input type="number" id="recurringCount" min="1" value="4"></div>
+                            <div class="form-group"><label>Recurring</label>
+                                <select id="recurringType">
+                                    <option value="none">None</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="recurring-options" style="display:none;">
+                                <label>Repetitions</label>
+                                <input type="number" id="recurringCount" min="1" value="4">
+                            </div>
                         </div>
                         <button id="addBookingButton" class="btn" type="button">Add Booking(s)</button>
                     </form>
@@ -173,26 +177,56 @@
                             <div class="form-group"><label>Month</label><select id="filterMonth"></select></div>
                             <div class="form-group"><label>Year</label><select id="filterYear"></select></div>
                         </div>
+                        <button id="clearFiltersButton" class="btn" style="width: auto;">Clear Filters</button>
                     </div>
 
-                    <div class="table-container"><div class="booking-table"><table><thead><tr><th>Pitch</th><th>Client</th><th>Date</th><th>Start</th><th>End</th><th>Total</th><th>Action</th></tr></thead><tbody id="bookingsTableBody"></tbody></table></div></div>
+                    <div class="table-container">
+                        <div class="booking-table">
+                            <table>
+                                <thead><tr><th>Pitch</th><th>Client</th><th>Date</th><th>Start</th><th>End</th><th>Total</th><th>Action</th></tr></thead>
+                                <tbody id="bookingsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="dashboard-content" class="tab-content" style="display:none;">
                     <div class="dashboard-grid">
                         <div class="dashboard-card"><div class="card-title">Total Revenue</div><div class="metric"><div id="totalRevenue" class="metric-value">AED 0.00</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">This Month</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0.00</div></div></div>
-                        <div class="dashboard-card" style="grid-column: 1 / -1; height: 350px;"><canvas id="monthlyRevenueChart"></canvas></div>
+                        <div class="dashboard-card"><div class="card-title">This Month's Revenue</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0.00</div></div></div>
+                        <div class="dashboard-card"><div class="card-title">This Year's Revenue</div><div class="metric"><div id="yearlyRevenue" class="metric-value">AED 0.00</div></div></div>
+                        <div class="dashboard-card"><div class="card-title">Total Bookings</div><div class="metric"><div id="totalBookingsCount" class="metric-value">0</div></div></div>
+                        
+                        <div class="dashboard-card">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div class="card-title">Revenue by Pitch</div>
+                                <select id="pitchRevenueMonthFilter" style="padding:4px;"></select>
+                            </div>
+                            <div id="pitchRevenueBreakdown" style="margin-top:10px;"></div>
+                        </div>
+                        
+                        <div class="dashboard-card" style="grid-column: 1 / -1; height: 350px;">
+                            <div class="card-title">Monthly Performance</div>
+                            <canvas id="monthlyRevenueChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
                 <div id="calendar-content" class="tab-content" style="display:none;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><button id="prevMonthBtn" class="btn" style="width:auto;">⬅</button><h2 id="calendarMonth"></h2><button id="nextMonthBtn" class="btn" style="width:auto;">➡</button></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
+                        <button id="prevMonthBtn" class="btn" style="width:auto;">⬅</button>
+                        <h2 id="calendarMonth"></h2>
+                        <button id="nextMonthBtn" class="btn" style="width:auto;">➡</button>
+                    </div>
                     <div id="calendarGrid"></div>
                 </div>
             </div>
         </div>
-        <div id="bookingDetailsPanel"><button id="detailsCloseBtn" class="btn" style="background:#dc3545; margin-bottom: 20px;">✖ Close</button><div id="bookingDetailsContent"></div></div>
+        
+        <div id="bookingDetailsPanel">
+            <button id="detailsCloseBtn" class="btn" style="background:#dc3545; margin-bottom: 20px;">✖ Close</button>
+            <div id="bookingDetailsContent"></div>
+        </div>
     </div>
 
 <script>
@@ -201,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     let monthlyRevenueChart;
 
+    // --- FIREBASE INITIALIZATION ---
     try {
         if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined') {
             firebase.initializeApp(firebaseConfig);
@@ -222,69 +257,120 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const db = new FirebaseDB();
 
-    function handleLogin() {
-        const u = document.getElementById('username').value, p = document.getElementById('password').value;
-        if (u === "EPsports2025" && p === "EPsport@25") {
-            localStorage.setItem('isLoggedIn', 'true');
-            showApp();
-        } else { document.getElementById('login-error').style.display = 'block'; }
+    // --- LOGIC: RECURRING TOGGLE ---
+    document.getElementById('recurringType').onchange = (e) => {
+        document.getElementById('recurring-options').style.display = (e.target.value === 'none') ? 'none' : 'block';
+    };
+
+    // --- LOGIC: BOOKING ADDITION WITH RECURRING LOGIC ---
+    async function handleAddBooking() {
+        const data = {
+            pitch: document.getElementById('pitch').value, clientName: document.getElementById('clientName').value,
+            contact: document.getElementById('contact').value, date: document.getElementById('bookingDate').value,
+            startTime: document.getElementById('startTime').value, endTime: document.getElementById('endTime').value,
+            pricePerHour: parseFloat(document.getElementById('pricePerHour').value)
+        };
+
+        if(!data.pitch || !data.date || !data.startTime || !data.endTime || isNaN(data.pricePerHour)) return alert("Fill all required fields.");
+
+        const recurringType = document.getElementById('recurringType').value;
+        const count = parseInt(document.getElementById('recurringCount').value) || 1;
+
+        if(recurringType === 'none') {
+            await db.add(data);
+        } else {
+            const [y, m, d] = data.date.split('-').map(Number);
+            let current = new Date(Date.UTC(y, m-1, d));
+            for(let i=0; i<count; i++) {
+                const bDate = new Date(current);
+                if(recurringType === 'weekly') bDate.setUTCDate(current.getUTCDate() + (i*7));
+                else bDate.setUTCMonth(current.getUTCMonth() + i);
+                await db.add({...data, date: bDate.toISOString().split('T')[0]});
+            }
+        }
+        alert("Booking(s) added successfully.");
+        location.reload();
     }
 
-    async function showApp() {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-wrapper').style.display = 'block';
-        setupFilters(); displayBookings(); updateDashboard();
-    }
-
+    // --- LOGIC: FILTERS ---
     async function displayBookings() {
         const bookings = await db.getAll();
         const clientF = document.getElementById('filterClientName').value.toLowerCase();
-        const filtered = bookings.filter(b => b.clientName.toLowerCase().includes(clientF));
-        document.getElementById('bookingsTableBody').innerHTML = filtered.map(b => `<tr><td>${b.pitch}</td><td>${b.clientName}</td><td>${b.date}</td><td>${b.startTime}</td><td>${b.endTime}</td><td>${b.totalPayment.toFixed(2)}</td><td><button class="btn" style="background:#dc3545; padding:5px 10px;" onclick="deleteBooking('${b.id}')">Del</button></td></tr>`).join('');
+        const pitchF = document.getElementById('filterPitch').value;
+        const monthF = document.getElementById('filterMonth').value;
+        const yearF = document.getElementById('filterYear').value;
+
+        let filtered = bookings.filter(b => {
+            const d = new Date(b.date);
+            return (!clientF || b.clientName.toLowerCase().includes(clientF)) &&
+                   (!pitchF || b.pitch === pitchF) &&
+                   (!monthF || d.getMonth() == monthF) &&
+                   (!yearF || d.getFullYear() == yearF);
+        });
+
+        document.getElementById('bookingsTableBody').innerHTML = filtered.map(b => `
+            <tr>
+                <td>${b.pitch}</td><td>${b.clientName}</td><td>${b.date}</td><td>${b.startTime}</td><td>${b.endTime}</td>
+                <td>AED ${b.totalPayment.toFixed(2)}</td>
+                <td><button class="btn" style="background:#dc3545; padding:5px 10px;" onclick="deleteBooking('${b.id}')">Delete</button></td>
+            </tr>
+        `).join('');
     }
 
-    window.deleteBooking = async (id) => { if(confirm("Delete?")) { await db.delete(id); displayBookings(); updateDashboard(); }};
-
+    // --- LOGIC: DASHBOARD ---
     async function updateDashboard() {
         const bookings = await db.getAll();
+        const now = new Date();
+        const currentM = now.getMonth();
+        const currentY = now.getFullYear();
+
         const total = bookings.reduce((s, b) => s + b.totalPayment, 0);
+        const thisMonth = bookings.filter(b => new Date(b.date).getMonth() === currentM && new Date(b.date).getFullYear() === currentY).reduce((s, b) => s + b.totalPayment, 0);
+        const thisYear = bookings.filter(b => new Date(b.date).getFullYear() === currentY).reduce((s, b) => s + b.totalPayment, 0);
+
         document.getElementById('totalRevenue').textContent = `AED ${total.toFixed(2)}`;
-        
-        const ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
-        const data = Array(12).fill(0);
-        bookings.forEach(b => { data[new Date(b.date).getMonth()] += b.totalPayment; });
+        document.getElementById('monthlyRevenue').textContent = `AED ${thisMonth.toFixed(2)}`;
+        document.getElementById('yearlyRevenue').textContent = `AED ${thisYear.toFixed(2)}`;
+        document.getElementById('totalBookingsCount').textContent = bookings.length;
+
+        // Chart
+        const chartData = Array(12).fill(0);
+        bookings.filter(b => new Date(b.date).getFullYear() === currentY).forEach(b => { chartData[new Date(b.date).getMonth()] += b.totalPayment; });
         if (monthlyRevenueChart) monthlyRevenueChart.destroy();
-        monthlyRevenueChart = new Chart(ctx, { type: 'bar', data: { labels: monthNames.map(m=>m.slice(0,3)), datasets: [{ label: 'Revenue', data: data, backgroundColor: '#667eea' }] }});
+        monthlyRevenueChart = new Chart(document.getElementById('monthlyRevenueChart'), {
+            type: 'bar', data: { labels: monthNames.map(m=>m.slice(0,3)), datasets: [{ label: 'Revenue', data: chartData, backgroundColor: '#667eea' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
     }
 
-    function setupFilters() {
-        const yearF = document.getElementById('filterYear');
-        const currentYear = new Date().getFullYear();
-        for(let i=0; i<3; i++) yearF.innerHTML += `<option value="${currentYear-i}">${currentYear-i}</option>`;
-        const monthF = document.getElementById('filterMonth');
-        monthNames.forEach((m, i) => monthF.innerHTML += `<option value="${i}">${m}</option>`);
-    }
-
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(tab + '-content').style.display = 'block';
-        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-        if(tab === 'calendar') calendar.render();
-    }
-
+    // --- LOGIC: CALENDAR DETAILS & COLORS ---
     const calendar = {
         current: new Date(),
+        colors: {},
+        getColor(name) {
+            if(!this.colors[name]) this.colors[name] = `hsl(${Math.random()*360}, 70%, 50%)`;
+            return this.colors[name];
+        },
         async render() {
             const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
-            const month = this.current.getMonth(), year = this.current.getFullYear();
-            document.getElementById('calendarMonth').textContent = `${monthNames[month]} ${year}`;
+            const m = this.current.getMonth(), y = this.current.getFullYear();
+            document.getElementById('calendarMonth').textContent = `${monthNames[m]} ${y}`;
             const bookings = await db.getAll();
-            for(let d=1; d<=new Date(year, month+1, 0).getDate(); d++) {
+            for(let d=1; d<=new Date(y, m+1, 0).getDate(); d++) {
                 const cell = document.createElement('div'); cell.innerHTML = `<b>${d}</b>`;
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 bookings.filter(b => b.date === dateStr).forEach(b => {
-                    const div = document.createElement('div'); div.style.background = '#667eea'; div.style.color = 'white'; div.style.fontSize = '9px'; div.textContent = b.clientName;
+                    const div = document.createElement('div');
+                    div.style.cssText = `background:${this.getColor(b.clientName)}; color:white; padding:2px; margin-top:2px; border-radius:3px; cursor:pointer; font-size:10px;`;
+                    div.textContent = b.clientName;
+                    div.onclick = () => {
+                        document.getElementById('bookingDetailsContent').innerHTML = `
+                            <p><b>Client:</b> ${b.clientName}</p><p><b>Pitch:</b> ${b.pitch}</p><p><b>Time:</b> ${b.startTime} - ${b.endTime}</p>
+                            <p><b>Total:</b> AED ${b.totalPayment.toFixed(2)}</p><hr>
+                            <button class="btn" style="background:#dc3545;" onclick="deleteBooking('${b.id}')">Delete this Booking</button>
+                        `;
+                        document.getElementById('bookingDetailsPanel').style.display = 'block';
+                    };
                     cell.appendChild(div);
                 });
                 grid.appendChild(cell);
@@ -292,23 +378,45 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    document.getElementById('loginButton').onclick = handleLogin;
-    document.getElementById('addBookingButton').onclick = async () => {
-        const data = {
-            pitch: document.getElementById('pitch').value, clientName: document.getElementById('clientName').value,
-            contact: document.getElementById('contact').value, date: document.getElementById('bookingDate').value,
-            startTime: document.getElementById('startTime').value, endTime: document.getElementById('endTime').value,
-            pricePerHour: parseFloat(document.getElementById('pricePerHour').value)
-        };
-        await db.add(data); displayBookings(); updateDashboard();
+    // --- SETUP & HANDLERS ---
+    window.deleteBooking = async (id) => { if(confirm("Delete this booking?")) { await db.delete(id); location.reload(); }};
+    document.getElementById('loginButton').onclick = () => {
+        if(document.getElementById('username').value === "EPsports2025" && document.getElementById('password').value === "EPsport@25") {
+            localStorage.setItem('isLoggedIn', 'true');
+            location.reload();
+        } else document.getElementById('login-error').style.display = 'block';
     };
-    document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTab(t.dataset.tab));
+
+    if(localStorage.getItem('isLoggedIn') === 'true') {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-wrapper').style.display = 'block';
+        
+        // Populate Filter Options
+        const pitchOps = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome', 'Half Pitch'];
+        document.getElementById('filterPitch').innerHTML = '<option value="">All Pitches</option>' + pitchOps.map(p=>`<option value="${p}">${p}</option>`).join('');
+        document.getElementById('filterMonth').innerHTML = '<option value="">All Months</option>' + monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+        document.getElementById('filterYear').innerHTML = `<option value="">All Years</option><option value="2025">2025</option><option value="2026">2026</option>`;
+
+        displayBookings(); updateDashboard();
+    }
+
+    document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('.tab').forEach(tb => tb.classList.remove('active'));
+        document.getElementById(t.dataset.tab + '-content').style.display = 'block';
+        t.classList.add('active');
+        if(t.dataset.tab === 'calendar') calendar.render();
+    });
+
+    document.getElementById('addBookingButton').onclick = handleAddBooking;
     document.getElementById('filterClientName').oninput = displayBookings;
+    document.getElementById('filterPitch').onchange = displayBookings;
+    document.getElementById('filterMonth').onchange = displayBookings;
+    document.getElementById('filterYear').onchange = displayBookings;
     document.getElementById('prevMonthBtn').onclick = () => { calendar.current.setMonth(calendar.current.getMonth()-1); calendar.render(); };
     document.getElementById('nextMonthBtn').onclick = () => { calendar.current.setMonth(calendar.current.getMonth()+1); calendar.render(); };
     document.getElementById('signOutButton').onclick = () => { localStorage.removeItem('isLoggedIn'); location.reload(); };
-    
-    if (localStorage.getItem('isLoggedIn') === 'true') showApp();
+    document.getElementById('detailsCloseBtn').onclick = () => document.getElementById('bookingDetailsPanel').style.display = 'none';
 });
 </script>
 </body>
