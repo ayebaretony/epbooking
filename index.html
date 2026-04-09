@@ -30,7 +30,6 @@
         .export-btn { position:absolute; top:20px; right:20px; }
         .import-btn { position:absolute; top:20px; right:150px; }
         
-        /* Added Style for Report Button */
         .report-btn { position:absolute; top:70px; right:20px; background: #28a745 !important; }
         
         .signout-btn { position:absolute; top:20px; left:20px; background:#dc3545; }
@@ -275,14 +274,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.innerHTML = `<h1>Error: Could not initialize Firebase. Please ensure firebase-config.js is correct and Firebase SDKs are loaded.</h1>`;
         return;
     }
-    // --- END: FIREBASE SETUP ---
 
-    // --- GLOBAL VARIABLES & CONSTANTS ---
     let inactivityTimer;
     let monthlyRevenueChart;
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-    // --- AUTHENTICATION & SESSION MANAGEMENT ---
     function handleLogin() {
         const user = document.getElementById('username').value;
         const pass = document.getElementById('password').value;
@@ -322,7 +318,6 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    // --- DATABASE CLASS ---
     class FirebaseDB {
         constructor() { this.bookingsCollection = firestore.collection("bookings"); }
         async getAllBookings() {
@@ -339,7 +334,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const db = new FirebaseDB();
 
-    // --- CORE BOOKING LOGIC ---
     function toggleRecurringOptions() {
         const type = document.getElementById('recurringType').value;
         document.getElementById('recurring-options').style.display = (type === 'none') ? 'none' : 'block';
@@ -361,45 +355,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (newStart < existingEnd && newEnd > existingStart) return true;
             }
             return false;
-        } catch (error) {
-            console.error("Error checking for conflicts:", error);
-            return true;
-        }
+        } catch (error) { return true; }
     }
 
     async function addBooking(){
-        try {
-            const data = {
-                pitch: document.getElementById("pitch").value, clientName: document.getElementById("clientName").value,
-                contact: document.getElementById("contact").value, date: document.getElementById("bookingDate").value,
-                startTime: document.getElementById("startTime").value, endTime: document.getElementById("endTime").value,
-                pricePerHour: parseFloat(document.getElementById("pricePerHour").value)
-            };
-            if(!data.pitch || !data.clientName || !data.contact || !data.date || !data.startTime || !data.endTime || isNaN(data.pricePerHour)){
-                alert("Please fill all required fields."); return;
-            }
-            const recurringType = document.getElementById('recurringType').value;
-            const recurringCount = parseInt(document.getElementById('recurringCount').value, 10);
-            if (recurringType === 'none') {
-                if (await isConflict(data)) { alert("Conflict!"); return; }
-                await db.addBooking(data);
-                location.reload();
-            } else {
-                const potentialBookings = [];
-                const [year, month, day] = data.date.split('-').map(Number);
-                const initialUTCDate = new Date(Date.UTC(year, month - 1, day));
-                for (let i = 0; i < recurringCount; i++) {
-                    const newBookingData = { ...data };
-                    const nextDate = new Date(initialUTCDate);
-                    if (recurringType === 'weekly') nextDate.setUTCDate(initialUTCDate.getUTCDate() + (i * 7));
-                    else if (recurringType === 'monthly') nextDate.setUTCMonth(initialUTCDate.getUTCMonth() + i);
-                    newBookingData.date = nextDate.toISOString().slice(0, 10);
-                    potentialBookings.push(newBookingData);
-                }
-                for(const b of potentialBookings) await db.addBooking(b);
-                location.reload();
-            }
-        } catch (e) { console.error(e); }
+        const data = {
+            pitch: document.getElementById("pitch").value, clientName: document.getElementById("clientName").value,
+            contact: document.getElementById("contact").value, date: document.getElementById("bookingDate").value,
+            startTime: document.getElementById("startTime").value, endTime: document.getElementById("endTime").value,
+            pricePerHour: parseFloat(document.getElementById("pricePerHour").value)
+        };
+        if(!data.pitch || !data.clientName || !data.date || !data.startTime || !data.endTime || isNaN(data.pricePerHour)) return alert("Fill all * fields");
+        
+        const type = document.getElementById('recurringType').value;
+        const count = parseInt(document.getElementById('recurringCount').value) || 1;
+        
+        for(let i=0; i<count; i++){
+            let current = {...data};
+            let d = new Date(data.date);
+            if(type === 'weekly') d.setDate(d.getDate() + (i*7));
+            if(type === 'monthly') d.setMonth(d.getMonth() + i);
+            current.date = d.toISOString().split('T')[0];
+            await db.addBooking(current);
+        }
+        location.reload();
     }
 
     async function deleteBooking(id){ if(confirm("Are you sure?")){ await db.deleteBooking(id); location.reload(); } }
@@ -410,211 +389,145 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth();
         const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
-        if (uniqueYears.length === 0) { uniqueYears.push(currentYear); }
+        if (uniqueYears.length === 0) uniqueYears.push(currentYear);
         
-        const allFilters = [
-            { el: document.getElementById('yearFilter'), val: 'chartYear', type: 'year' },
-            { el: document.getElementById('repeatClientMonthFilter'), val: 'repeatMonth', type: 'month' },
-            { el: document.getElementById('repeatClientYearFilter'), val: 'repeatYear', type: 'year' },
-            { el: document.getElementById('pitchRevenueMonthFilter'), val: 'pitchMonth', type: 'month' },
-            { el: document.getElementById('pitchRevenueYearFilter'), val: 'pitchYear', type: 'year' },
-        ];
-        
-        const selectedVals = allFilters.reduce((acc, f) => ({...acc, [f.val]: f.el.value}), {});
+        // Setup filters
+        const setup = (el, type) => {
+            if(el.options.length > 0) return;
+            if(type==='m') monthNames.forEach((m,i)=> el.innerHTML += `<option value="${i}">${m}</option>`);
+            if(type==='y') uniqueYears.forEach(y => el.innerHTML += `<option value="${y}">${y}</option>`);
+        };
+        setup(document.getElementById('pitchRevenueMonthFilter'), 'm');
+        setup(document.getElementById('pitchRevenueYearFilter'), 'y');
+        setup(document.getElementById('repeatClientMonthFilter'), 'm');
+        setup(document.getElementById('repeatClientYearFilter'), 'y');
+        setup(document.getElementById('yearFilter'), 'y');
 
-        allFilters.forEach(filter => {
-            if (filter.type === 'month' && filter.el.options.length === 0) {
-                monthNames.forEach((month, index) => filter.el.innerHTML += `<option value="${index}">${month}</option>`);
-            } else if (filter.type === 'year') {
-                filter.el.innerHTML = '';
-                uniqueYears.forEach(year => filter.el.innerHTML += `<option value="${year}">${year}</option>`);
-            }
-        });
-
-        document.getElementById('yearFilter').value = selectedVals.chartYear || currentYear;
-        document.getElementById('repeatClientMonthFilter').value = selectedVals.repeatMonth || currentMonth;
-        document.getElementById('repeatClientYearFilter').value = selectedVals.repeatYear || currentYear;
-        document.getElementById('pitchRevenueMonthFilter').value = selectedVals.pitchMonth || currentMonth;
-        document.getElementById('pitchRevenueYearFilter').value = selectedVals.pitchYear || currentYear;
-        
+        // Stats
         document.getElementById('totalRevenue').textContent = `AED ${bookings.reduce((s, b) => s + b.totalPayment, 0).toFixed(2)}`;
         document.getElementById('monthlyRevenue').textContent = `AED ${bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; }).reduce((s, b) => s + b.totalPayment, 0).toFixed(2)}`;
         document.getElementById('yearlyRevenue').textContent = `AED ${bookings.filter(b => new Date(b.date).getFullYear() === currentYear).reduce((s, b) => s + b.totalPayment, 0).toFixed(2)}`;
         document.getElementById('totalBookingsCount').textContent = bookings.length;
 
-        // ... Revenue breakdown logic ...
-        const yearForPitch = parseInt(document.getElementById('pitchRevenueYearFilter').value);
-        const monthForPitch = parseInt(document.getElementById('pitchRevenueMonthFilter').value);
-        const pitchRevData = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === yearForPitch && d.getMonth() === monthForPitch; });
-        const pitchRevenue = pitchRevData.reduce((acc, b) => { acc[b.pitch] = (acc[b.pitch] || 0) + b.totalPayment; return acc; }, {});
-        document.getElementById('pitchRevenueBreakdown').innerHTML = Object.entries(pitchRevenue).map(([p, r]) => `<div style="padding: 6px 0; display:flex; justify-content:space-between;"><strong>${p}:</strong> <span>AED ${r.toFixed(2)}</span></div>`).join('') || '<div class="empty-state">No data</div>';
+        // Pitch Revenue
+        const py = parseInt(document.getElementById('pitchRevenueYearFilter').value) || currentYear;
+        const pm = parseInt(document.getElementById('pitchRevenueMonthFilter').value) || currentMonth;
+        const pData = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === py && d.getMonth() === pm; });
+        const pRev = pData.reduce((acc, b) => { acc[b.pitch] = (acc[b.pitch] || 0) + b.totalPayment; return acc; }, {});
+        document.getElementById('pitchRevenueBreakdown').innerHTML = Object.entries(pRev).map(([p, r]) => `<div style="padding:6px 0; display:flex; justify-content:space-between;"><strong>${p}:</strong> <span>AED ${r.toFixed(2)}</span></div>`).join('') || '<div class="empty-state">No data</div>';
 
-        const chartCtx = document.getElementById('monthlyRevenueChart').getContext('2d');
-        const selectedYearForChart = parseInt(document.getElementById('yearFilter').value);
-        const monthlyData = Array(12).fill(0);
-        bookings.filter(b => new Date(b.date).getFullYear() === selectedYearForChart).forEach(b => { monthlyData[new Date(b.date).getMonth()] += b.totalPayment; });
-        
+        // Repeat Client Revenue
+        const ry = parseInt(document.getElementById('repeatClientYearFilter').value) || currentYear;
+        const rm = parseInt(document.getElementById('repeatClientMonthFilter').value) || currentMonth;
+        const globalCounts = bookings.reduce((acc, b) => { acc[b.clientName] = (acc[b.clientName] || 0) + 1; return acc; }, {});
+        const rData = bookings.filter(b => { const d = new Date(b.date); return d.getFullYear() === ry && d.getMonth() === rm && globalCounts[b.clientName] > 1; });
+        const rRev = rData.reduce((acc, b) => { acc[b.clientName] = (acc[b.clientName] || 0) + b.totalPayment; return acc; }, {});
+        document.getElementById('repeatClientRevenue').innerHTML = Object.entries(rRev).map(([c, r]) => `<div style="padding:6px 0; display:flex; justify-content:space-between;"><strong>${c}:</strong> <span>AED ${r.toFixed(2)}</span></div>`).join('') || '<div class="empty-state">No repeat clients</div>';
+
+        // Chart
+        const cy = parseInt(document.getElementById('yearFilter').value) || currentYear;
+        const cData = Array(12).fill(0);
+        bookings.filter(b => new Date(b.date).getFullYear() === cy).forEach(b => { cData[new Date(b.date).getMonth()] += b.totalPayment; });
+        const ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
         if (monthlyRevenueChart) monthlyRevenueChart.destroy();
-        monthlyRevenueChart = new Chart(chartCtx, { type: 'bar', data: { labels: monthNames.map(m => m.slice(0,3)), datasets: [{ label: `Revenue ${selectedYearForChart}`, data: monthlyData, backgroundColor: '#667eea' }] }, options: { responsive: true, maintainAspectRatio: false } });
+        monthlyRevenueChart = new Chart(ctx, { type: 'bar', data: { labels: monthNames.map(m => m.slice(0,3)), datasets: [{ label: `Revenue ${cy}`, data: cData, backgroundColor: '#667eea' }] }, options: { responsive: true, maintainAspectRatio: false } });
     }
 
     async function setupBookingFilters() {
-        const pitchFilter = document.getElementById('filterPitch');
-        const monthFilter = document.getElementById('filterMonth');
-        const yearFilter = document.getElementById('filterYear');
-        const uniquePitches = ['Fifa Pitch', 'Junior Football Pitch', 'Airdome', 'Half Pitch'];
-        const bookings = await db.getAllBookings();
-        const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
-        pitchFilter.innerHTML = '<option value="">All Pitches</option>';
-        uniquePitches.forEach(p => pitchFilter.innerHTML += `<option value="${p}">${p}</option>`);
-        monthFilter.innerHTML = '<option value="">All Months</option>';
-        monthNames.forEach((m, i) => monthFilter.innerHTML += `<option value="${i}">${m}</option>`);
-        yearFilter.innerHTML = '<option value="">All Years</option>';
-        uniqueYears.forEach(y => yearFilter.innerHTML += `<option value="${y}">${y}</option>`);
-    }
-
-    function clearBookingFilters() {
-        document.getElementById('filterClientName').value = '';
-        document.getElementById('filterPitch').value = '';
-        document.getElementById('filterMonth').value = '';
-        document.getElementById('filterYear').value = '';
-        displayBookings();
+        const pf = document.getElementById('filterPitch');
+        const mf = document.getElementById('filterMonth');
+        const yf = document.getElementById('filterYear');
+        const b = await db.getAllBookings();
+        const years = [...new Set(b.map(b => new Date(b.date).getFullYear()))].sort((a,b)=>b-a);
+        pf.innerHTML = '<option value="">All Pitches</option>' + ['Fifa Pitch', 'Junior Football Pitch', 'Airdome', 'Half Pitch'].map(p=>`<option>${p}</option>`).join('');
+        mf.innerHTML = '<option value="">All Months</option>' + monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+        yf.innerHTML = '<option value="">All Years</option>' + years.map(y=>`<option>${y}</option>`).join('');
     }
 
     async function displayBookings(){
-        const clientFilter = document.getElementById('filterClientName').value.toLowerCase();
-        const pitchFilter = document.getElementById('filterPitch').value;
-        const monthFilter = document.getElementById('filterMonth').value;
-        const yearFilter = document.getElementById('filterYear').value;
-        let filteredBookings = await db.getAllBookings();
-
-        if (clientFilter) filteredBookings = filteredBookings.filter(b => b.clientName.toLowerCase().includes(clientFilter));
-        if (pitchFilter) filteredBookings = filteredBookings.filter(b => b.pitch === pitchFilter);
-        if (monthFilter !== "") filteredBookings = filteredBookings.filter(b => new Date(b.date).getMonth() == monthFilter);
-        if (yearFilter !== "") filteredBookings = filteredBookings.filter(b => new Date(b.date).getFullYear() == yearFilter);
-
-        const tbody = document.getElementById("bookingsTableBody");
-        tbody.innerHTML = filteredBookings.map(b=>`<tr><td>${b.pitch}</td><td>${b.clientName}</td><td>${b.date}</td><td>${b.startTime}</td><td>${b.endTime}</td><td>${b.hours.toFixed(2)}h</td><td>${b.pricePerHour}</td><td>${b.totalPayment.toFixed(2)}</td><td>${b.contact}</td><td><button class="delete-btn" data-id="${b.id}">Delete</button></td></tr>`).join("");
+        const cf = document.getElementById('filterClientName').value.toLowerCase();
+        const pf = document.getElementById('filterPitch').value;
+        const mf = document.getElementById('filterMonth').value;
+        const yf = document.getElementById('filterYear').value;
+        let filtered = await db.getAllBookings();
+        if (cf) filtered = filtered.filter(b => b.clientName.toLowerCase().includes(cf));
+        if (pf) filtered = filtered.filter(b => b.pitch === pf);
+        if (mf !== "") filtered = filtered.filter(b => new Date(b.date).getMonth() == mf);
+        if (yf !== "") filtered = filtered.filter(b => new Date(b.date).getFullYear() == yf);
+        document.getElementById("bookingsTableBody").innerHTML = filtered.map(b=>`<tr><td>${b.pitch}</td><td>${b.clientName}</td><td>${b.date}</td><td>${b.startTime}</td><td>${b.endTime}</td><td>${b.hours.toFixed(2)}h</td><td>${b.pricePerHour}</td><td>${b.totalPayment.toFixed(2)}</td><td>${b.contact}</td><td><button class="delete-btn" data-id="${b.id}">Delete</button></td></tr>`).join("");
     }
     
-    function switchTab(tabName){ 
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-        document.querySelector(`.tab[data-tab='${tabName}']`).classList.add('active');
-        document.getElementById(tabName + '-content').style.display = 'block';
-        if(tabName === 'calendar') calendar.renderCalendar();
-        if(tabName === 'dashboard') updateDashboard();
-    }
-
-    async function exportToExcel() {
-        const bookings = await db.getAllBookings();
-        const worksheet = XLSX.utils.json_to_sheet(bookings);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
-        XLSX.writeFile(workbook, `Bookings_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    function switchTab(t){ 
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(x => x.style.display = 'none');
+        document.querySelector(`.tab[data-tab='${t}']`).classList.add('active');
+        document.getElementById(t + '-content').style.display = 'block';
+        if(t === 'calendar') calendar.renderCalendar();
+        if(t === 'dashboard') updateDashboard();
     }
 
     class CalendarController{
         constructor(){ this.currentDate = new Date(); this.clientColorMap = new Map(); }
-        getClientColor(clientName) {
-            if (!this.clientColorMap.has(clientName)) this.clientColorMap.set(clientName, `hsl(${Math.random() * 360}, 75%, 50%)`);
-            return this.clientColorMap.get(clientName);
-        }
+        getClientColor(c) { if (!this.clientColorMap.has(c)) this.clientColorMap.set(c, `hsl(${Math.random() * 360}, 75%, 50%)`); return this.clientColorMap.get(c); }
         async renderCalendar(){
-            const year = this.currentDate.getFullYear();
-            const month = this.currentDate.getMonth();
+            const y = this.currentDate.getFullYear();
+            const m = this.currentDate.getMonth();
             document.getElementById("calendarMonth").textContent = this.currentDate.toLocaleString('default',{month:'long',year:'numeric'});
             const grid = document.getElementById("calendarGrid");
             grid.innerHTML = "";
             ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d=>{let div=document.createElement("div");div.style.fontWeight="bold";div.textContent=d;grid.appendChild(div);});
-            for(let i=0;i<new Date(year,month,1).getDay();i++) grid.appendChild(document.createElement("div"));
+            for(let i=0;i<new Date(y,m,1).getDay();i++) grid.appendChild(document.createElement("div"));
             const bookings = await db.getAllBookings();
-            for(let day=1;day<=new Date(year,month+1,0).getDate();day++){
+            for(let day=1;day<=new Date(y,m+1,0).getDate();day++){
                 const cell = document.createElement("div");
                 cell.innerHTML = `<b>${day}</b>`;
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                bookings.filter(b=>b.date===dateStr).forEach(b=>{
-                    const div=document.createElement("div");
-                    div.style.cssText=`background:${this.getClientColor(b.clientName)};color:white;padding:2px;font-size:11px;border-radius:3px;margin:2px 0;cursor:pointer;`;
-                    div.textContent=`${b.startTime} ${b.clientName}`;
-                    div.onclick = () => this.showBookingDetails(b);
-                    cell.appendChild(div);
+                const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                bookings.filter(b=>b.date===ds).forEach(b=>{
+                    const d=document.createElement("div");
+                    d.style.cssText=`background:${this.getClientColor(b.clientName)};color:white;padding:2px;font-size:11px;border-radius:3px;margin:2px 0;cursor:pointer;`;
+                    d.textContent=`${b.startTime} ${b.clientName}`;
+                    d.onclick = () => {
+                        document.getElementById("bookingDetailsContent").innerHTML=`<p><b>Pitch:</b> ${b.pitch}</p><p><b>Client:</b> ${b.clientName}</p><p><b>Time:</b> ${b.startTime}-${b.endTime}</p><p><b>Total:</b> AED ${b.totalPayment.toFixed(2)}</p><hr><button class="btn" style="background:#dc3545;width:100%;" onclick="deleteBooking('${b.id}')">Delete Booking</button>`;
+                        document.getElementById("bookingDetailsPanel").style.display="block";
+                    };
+                    cell.appendChild(d);
                 });
                 grid.appendChild(cell);
             }
         }
         navigateMonth(d){ this.currentDate.setMonth(this.currentDate.getMonth()+d); this.renderCalendar(); }
-        showBookingDetails(b){
-            document.getElementById("bookingDetailsContent").innerHTML=`<p><b>Pitch:</b> ${b.pitch}</p><p><b>Client:</b> ${b.clientName}</p><p><b>Time:</b> ${b.startTime}-${b.endTime}</p><p><b>Total:</b> AED ${b.totalPayment.toFixed(2)}</p><hr><button id="detailsDeleteBtn" data-id="${b.id}" style="background:#dc3545;color:white;padding:10px;border:none;border-radius:5px;width:100%;">Delete Booking</button>`;
-            document.getElementById("bookingDetailsPanel").style.display="block";
-        }
+        goToToday(){ this.currentDate = new Date(); this.renderCalendar(); }
     }
     const calendar = new CalendarController();
 
-    // --- START: AI REPORT GENERATION LOGIC ---
-    document.getElementById('reportButton').addEventListener('click', async () => {
-        const bookings = await db.getAllBookings();
-        const uniqueYears = [...new Set(bookings.map(b => new Date(b.date).getFullYear()))].sort((a, b) => b - a);
-        document.getElementById('reportYearSelect').innerHTML = uniqueYears.map(y => `<option value="${y}">${y}</option>`).join('');
-        const monthOps = monthNames.map((m, i) => `<option value="${i}">${m}</option>`).join('');
-        document.getElementById('reportStartMonth').innerHTML = monthOps;
-        document.getElementById('reportEndMonth').innerHTML = monthOps;
-        document.getElementById('report-modal-overlay').style.display = 'flex';
-    });
-
-    document.getElementById('closeReportModal').addEventListener('click', () => document.getElementById('report-modal-overlay').style.display = 'none');
-
-    document.getElementById('generateFinalReport').addEventListener('click', async () => {
-        const year = parseInt(document.getElementById('reportYearSelect').value);
-        const start = parseInt(document.getElementById('reportStartMonth').value);
-        const end = parseInt(document.getElementById('reportEndMonth').value);
-        const all = await db.getAllBookings();
-        const filtered = all.filter(b => {
-            const d = new Date(b.date);
-            return d.getFullYear() === year && d.getMonth() >= start && d.getMonth() <= end;
-        });
-
-        if (!filtered.length) return alert("No data for period.");
-        
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFontSize(18); doc.text("Palace Sports Performance Report", 14, 20);
-        doc.setFontSize(12); doc.text(`Period: ${monthNames[start]} - ${monthNames[end]} ${year}`, 14, 30);
-        
-        const totalRev = filtered.reduce((s, b) => s + b.totalPayment, 0);
-        const pitchCounts = {}; filtered.forEach(b => pitchCounts[b.pitch] = (pitchCounts[b.pitch] || 0) + 1);
-        const busiest = Object.keys(pitchCounts).reduce((a, b) => pitchCounts[a] > pitchCounts[b] ? a : b, "N/A");
-
-        doc.setFontSize(14); doc.text("Strategic Insights", 14, 45);
-        doc.setFontSize(10);
-        doc.text(`• Total Revenue: AED ${totalRev.toLocaleString()}`, 14, 55);
-        doc.text(`• Most Utilized Pitch: ${busiest}`, 14, 62);
-        doc.text(`• Recommendation: Optimize pricing for ${busiest} during peak morning slots.`, 14, 69);
-
-        doc.autoTable({ startY: 80, head: [['Date', 'Client', 'Pitch', 'Amount']], body: filtered.map(b => [b.date, b.clientName, b.pitch, `AED ${b.totalPayment.toFixed(2)}`]) });
-        doc.save(`Palace_Sports_Report_${year}.pdf`);
-        document.getElementById('report-modal-overlay').style.display = 'none';
-    });
-    // --- END: AI REPORT LOGIC ---
-
-    // Standard Listeners
-    if (localStorage.getItem('isLoggedIn') === 'true' || sessionStorage.getItem('isLoggedIn') === 'true') showApp();
-    else document.getElementById('login-screen').style.display = 'flex';
-    
-    document.getElementById('loginButton').addEventListener('click', handleLogin);
-    document.getElementById('signOutButton').addEventListener('click', signOut);
-    document.getElementById('exportButton').addEventListener('click', exportToExcel);
-    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
-    document.getElementById('addBookingButton').addEventListener('click', addBooking);
-    document.getElementById('filterClientName').addEventListener('input', displayBookings);
-    document.getElementById('filterPitch').addEventListener('change', displayBookings);
-    document.getElementById('filterMonth').addEventListener('change', displayBookings);
-    document.getElementById('filterYear').addEventListener('change', displayBookings);
-    document.getElementById('prevMonthBtn').addEventListener('click', () => calendar.navigateMonth(-1));
-    document.getElementById('nextMonthBtn').addEventListener('click', () => calendar.navigateMonth(1));
-    document.getElementById('todayBtn').addEventListener('click', () => calendar.goToToday());
+    // Listeners
+    document.getElementById('loginButton').onclick = handleLogin;
+    document.getElementById('signOutButton').onclick = signOut;
+    document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => switchTab(tab.dataset.tab));
+    document.getElementById('addBookingButton').onclick = addBooking;
+    document.getElementById('recurringType').onchange = toggleRecurringOptions;
+    document.getElementById('filterClientName').oninput = displayBookings;
+    ['filterPitch', 'filterMonth', 'filterYear'].forEach(id => document.getElementById(id).onchange = displayBookings);
+    document.getElementById('prevMonthBtn').onclick = () => calendar.navigateMonth(-1);
+    document.getElementById('nextMonthBtn').onclick = () => calendar.navigateMonth(1);
+    document.getElementById('todayBtn').onclick = () => calendar.goToToday();
     document.getElementById('detailsCloseBtn').onclick = () => document.getElementById('bookingDetailsPanel').style.display = 'none';
     document.getElementById('bookingsTableBody').onclick = (e) => { if(e.target.dataset.id) deleteBooking(e.target.dataset.id); };
+    
+    // Auto-calculate
+    ['startTime', 'endTime', 'pricePerHour'].forEach(id => document.getElementById(id).oninput = () => {
+        const s = document.getElementById('startTime').value;
+        const e = document.getElementById('endTime').value;
+        const p = parseFloat(document.getElementById('pricePerHour').value);
+        if(s && e && !isNaN(p)) {
+            const h = (new Date(`1970-01-01T${e}`) - new Date(`1970-01-01T${s}`)) / 3600000;
+            document.getElementById('totalHours').value = h.toFixed(2);
+            document.getElementById('totalPayment').value = (h * p).toFixed(2);
+        }
+    });
+
+    if (localStorage.getItem('isLoggedIn') === 'true' || sessionStorage.getItem('isLoggedIn') === 'true') showApp();
+    else document.getElementById('login-screen').style.display = 'flex';
 });
 </script>
 </body>
