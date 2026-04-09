@@ -11,7 +11,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     
@@ -26,45 +25,48 @@
         .container { max-width:1400px; margin:0 auto; background:white; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.1); overflow:hidden; }
         .header { background:linear-gradient(135deg, #2c3e50, #34495e); color:white; padding:30px; text-align:center; position:relative; }
         .header h1 { font-size:2.5em; margin-bottom:10px; }
-        .header-btn { background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.3); color:white; padding:10px 20px; border-radius:25px; cursor:pointer; font-size:14px; font-weight:600; }
+        .header-btn { background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.3); color:white; padding:10px 20px; border-radius:25px; cursor:pointer; font-size:14px; font-weight:600; transition: 0.3s; }
+        .header-btn:hover { background: rgba(255,255,255,0.4); }
         .export-btn { position:absolute; top:20px; right:20px; }
-        .import-btn { position:absolute; top:20px; right:150px; }
         .report-btn { position:absolute; top:70px; right:20px; background: #28a745 !important; }
         .signout-btn { position:absolute; top:20px; left:20px; background:#dc3545; }
         
         .tabs { display:flex; background:#f8f9fa; border-bottom:3px solid #e9ecef; }
-        .tab { flex:1; padding:20px; text-align:center; background:#e9ecef; cursor:pointer; font-weight:bold; }
-        .tab.active { background:white; color:#2c3e50; }
+        .tab { flex:1; padding:20px; text-align:center; background:#e9ecef; cursor:pointer; font-weight:bold; transition: 0.3s; }
+        .tab.active { background:white; color:#2c3e50; border-bottom: 4px solid #667eea; }
         
         .content { padding:30px; }
         .booking-form, .filter-bar { background:#f8f9fa; padding:20px; border-radius:15px; margin-bottom:30px; border: 1px solid #eee; }
         .form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:20px; margin-bottom:20px; }
         .form-group { display:flex; flex-direction:column; }
-        .form-group label { font-weight:600; margin-bottom:8px; }
-        .form-group input, .form-group select { padding:12px; border:2px solid #e9ecef; border-radius:10px; }
-        .calculated-field { background:#eee !important; font-weight:600; }
+        .form-group label { font-weight:600; margin-bottom:8px; color: #444; }
+        .form-group input, .form-group select { padding:12px; border:2px solid #e9ecef; border-radius:10px; font-size: 14px; }
+        .calculated-field { background:#eee !important; font-weight:600; color: #2c3e50; }
         
-        .btn { padding:12px 20px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:25px; cursor:pointer; font-weight:600; }
+        .btn { padding:12px 20px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; border-radius:25px; cursor:pointer; font-weight:600; transition: 0.3s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         
         .booking-table { margin-top:20px; border-radius:15px; overflow-x:auto; }
         table { width:100%; border-collapse:collapse; background: white; }
         th { background:#34495e; color:white; padding:15px; text-align: left; }
         td { padding:12px; border-bottom:1px solid #eee; }
-        .delete-btn { background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:20px; cursor:pointer; }
+        .delete-btn { background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:20px; cursor:pointer; font-size: 12px; }
         
         .dashboard-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
-        .dashboard-card { background:#fff; padding:20px; border-radius:15px; border: 1px solid #eee; }
-        .card-title { font-weight:bold; margin-bottom:15px; display: flex; justify-content: space-between; align-items: center; }
+        .dashboard-card { background:#fff; padding:20px; border-radius:15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .card-title { font-weight:bold; margin-bottom:15px; display: flex; justify-content: space-between; align-items: center; color: #2c3e50; }
         .metric { background:#667eea; color:white; border-radius:10px; padding:20px; text-align:center; }
         .metric-value { font-size:2em; font-weight:bold; }
         
         #calendarGrid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; background: #eee; padding: 10px; border-radius: 15px; }
-        #calendarGrid div { background:#fff; border-radius:10px; padding:8px; min-height:110px; border: 1px solid #ddd; }
-        .calendar-day-head { font-weight: bold; text-align: center; min-height: auto !important; background: #34495e !important; color: white; padding: 10px !important; }
+        #calendarGrid div { background:#fff; border-radius:10px; padding:8px; min-height:110px; border: 1px solid #ddd; position: relative; }
+        .calendar-day-head { font-weight: bold; text-align: center; min-height: auto !important; background: #34495e !important; color: white; padding: 10px !important; border: none !important; }
 
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: none; align-items: center; justify-content: center; z-index: 5000; }
-        .login-box { background: white; padding: 40px; border-radius: 20px; width: 400px; text-align: center; }
+        .login-box { background: white; padding: 40px; border-radius: 20px; width: 400px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+        
         #report-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 6000; }
+        .modal-box { background:white; padding:40px; border-radius:20px; width: 450px; }
         .empty-state { text-align: center; color: #999; padding: 20px; font-style: italic; }
     </style>
 </head>
@@ -72,8 +74,9 @@
 
     <div id="login-screen">
         <div class="login-box">
-            <h2>⚽ Palace Sports</h2>
-            <div class="form-group" style="margin-top:20px; text-align: left;"><label>Username</label><input id="username" type="text"></div>
+            <h2 style="margin-bottom:10px;">⚽ Palace Sports</h2>
+            <p style="color: #666; margin-bottom:20px;">Management Portal</p>
+            <div class="form-group" style="text-align: left;"><label>Username</label><input id="username" type="text"></div>
             <div class="form-group" style="margin-top:15px; text-align: left;"><label>Password</label><input id="password" type="password"></div>
             <button id="loginButton" class="btn" style="width:100%; margin-top:25px;">Login</button>
             <p id="login-error" style="color:#dc3545; display:none; margin-top:15px;">Invalid Credentials</p>
@@ -81,7 +84,7 @@
     </div>
 
     <div id="report-modal-overlay">
-        <div class="modal-box" style="background:white; padding:40px; border-radius:20px; width: 450px;">
+        <div class="modal-box">
             <h2 style="text-align:center; margin-bottom:20px;">📄 AI Performance Report</h2>
             <div class="form-group"><label>Select Year</label><select id="reportYearSelect"></select></div>
             <div class="form-row" style="margin-top:15px;">
@@ -89,7 +92,7 @@
                 <div class="form-group"><label>To</label><select id="reportEndMonth"></select></div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 25px;">
-                <button id="generateFinalReport" class="btn" style="flex:1; background: #28a745;">Download PDF</button>
+                <button id="generateFinalReport" class="btn" style="flex:1; background: #28a745;">Generate PDF</button>
                 <button id="closeReportModal" class="btn" style="flex:1; background: #6c757d;">Cancel</button>
             </div>
         </div>
@@ -99,11 +102,9 @@
         <div class="container">
             <div class="header">
                 <button id="signOutButton" class="header-btn signout-btn">Sign Out</button>
-                <h1>⚽ Football Pitch Booking System</h1>
-                <input type="file" id="importFile" style="display:none;" accept=".xlsx, .xls">
-                <button id="importButton" class="header-btn import-btn">📥 Import</button>
-                <button id="exportButton" class="header-btn export-btn">📊 Export</button>
-                <button id="reportButton" class="header-btn report-btn">📄 AI Report</button>
+                <h1>⚽ Pitch Booking System</h1>
+                <button id="exportButton" class="header-btn export-btn">📊 Excel Export</button>
+                <button id="reportButton" class="header-btn report-btn">📄 AI Analysis</button>
             </div>
 
             <div class="tabs">
@@ -125,8 +126,8 @@
                                     <option>Half Pitch</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>Client *</label><input id="clientName"></div>
-                            <div class="form-group"><label>Contact *</label><input id="contact"></div>
+                            <div class="form-group"><label>Client *</label><input id="clientName" placeholder="Full Name"></div>
+                            <div class="form-group"><label>Contact *</label><input id="contact" placeholder="Phone or Email"></div>
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>Date *</label><input type="date" id="bookingDate"></div>
@@ -134,9 +135,9 @@
                             <div class="form-group"><label>End *</label><input type="time" id="endTime"></div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group"><label>Price/hr (AED)</label><input type="number" id="pricePerHour"></div>
-                            <div class="form-group"><label>Total Hours</label><input id="totalHours" class="calculated-field" readonly></div>
-                            <div class="form-group"><label>Total Payment (AED)</label><input id="totalPayment" class="calculated-field" readonly></div>
+                            <div class="form-group"><label>Price/hr (AED)</label><input type="number" id="pricePerHour" value="500"></div>
+                            <div class="form-group"><label>Total Hours</label><input id="totalHours" class="calculated-field" readonly value="0"></div>
+                            <div class="form-group"><label>Total Payment (AED)</label><input id="totalPayment" class="calculated-field" readonly value="0"></div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
@@ -148,17 +149,18 @@
                                 </select>
                             </div>
                             <div class="form-group" id="recurring-options" style="display:none;">
-                                <label>How many times?</label>
+                                <label>Frequency (Count)</label>
                                 <input type="number" id="recurringCount" min="1" value="4">
                             </div>
                         </div>
-                        <button id="addBookingButton" class="btn" type="button">Add Booking</button>
+                        <button id="addBookingButton" class="btn" type="button" style="width: 100%;">Create Booking Entry</button>
                     </form>
 
                     <div class="filter-bar">
+                        <h4 style="margin-bottom:15px; color:#2c3e50;">🔍 Filter Records</h4>
                         <div class="form-row">
-                            <div class="form-group"><label>Client Name</label><input type="text" id="filterClientName"></div>
-                            <div class="form-group"><label>Pitch</label><select id="filterPitch"></select></div>
+                            <div class="form-group"><label>Search Client</label><input type="text" id="filterClientName"></div>
+                            <div class="form-group"><label>Pitch Type</label><select id="filterPitch"></select></div>
                             <div class="form-group"><label>Month</label><select id="filterMonth"></select></div>
                             <div class="form-group"><label>Year</label><select id="filterYear"></select></div>
                         </div>
@@ -174,26 +176,26 @@
 
                 <div id="dashboard-content" class="tab-content" style="display:none;">
                     <div class="dashboard-grid">
-                        <div class="dashboard-card"><div class="card-title">Total Revenue</div><div class="metric"><div id="totalRevenue" class="metric-value">AED 0</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">Monthly Revenue</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0</div></div></div>
-                        <div class="dashboard-card"><div class="card-title">Total Bookings</div><div class="metric"><div id="totalBookingsCount" class="metric-value">0</div></div></div>
+                        <div class="dashboard-card"><div class="card-title">Total Revenue (All Time)</div><div class="metric"><div id="totalRevenue" class="metric-value">AED 0</div></div></div>
+                        <div class="dashboard-card"><div class="card-title">Current Month Revenue</div><div class="metric"><div id="monthlyRevenue" class="metric-value">AED 0</div></div></div>
+                        <div class="dashboard-card"><div class="card-title">Active Reservations</div><div class="metric"><div id="totalBookingsCount" class="metric-value">0</div></div></div>
                         
                         <div class="dashboard-card">
-                            <div class="card-title">Revenue by Pitch 
+                            <div class="card-title">Pitch Earnings
                                 <div style="display:flex; gap:5px;"><select id="pRevM" style="padding:2px;"></select><select id="pRevY" style="padding:2px;"></select></div>
                             </div>
-                            <div id="pitchRevenueBreakdown"><div class="empty-state">No data available</div></div>
+                            <div id="pitchRevenueBreakdown"></div>
                         </div>
 
                         <div class="dashboard-card">
-                            <div class="card-title">Repeat Client Revenue
+                            <div class="card-title">Top Loyal Clients
                                 <div style="display:flex; gap:5px;"><select id="rCliM" style="padding:2px;"></select><select id="rCliY" style="padding:2px;"></select></div>
                             </div>
-                            <div id="repeatClientRevenue"><div class="empty-state">No repeat clients</div></div>
+                            <div id="repeatClientRevenue"></div>
                         </div>
 
                         <div class="dashboard-card" style="grid-column: 1 / -1; height: 400px;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Monthly Revenue Trend</strong><select id="yearFilter"></select></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><strong>Revenue Trend</strong><select id="yearFilter"></select></div>
                             <canvas id="monthlyRevenueChart"></canvas>
                         </div>
                     </div>
@@ -201,10 +203,12 @@
 
                 <div id="calendar-content" class="tab-content" style="display:none;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
-                        <button id="prevMonthBtn" class="btn">⬅ Prev</button>
+                        <button id="prevMonthBtn" class="btn">⬅ Previous</button>
                         <h2 id="calendarMonth"></h2>
-                        <button id="nextMonthBtn" class="btn">Next ➡</button>
-                        <button id="todayBtn" class="btn">Today</button>
+                        <div>
+                            <button id="todayBtn" class="btn" style="background:#34495e;">Today</button>
+                            <button id="nextMonthBtn" class="btn">Next ➡</button>
+                        </div>
                     </div>
                     <div id="calendarGrid"></div>
                 </div>
@@ -212,8 +216,8 @@
         </div>
 
         <div id="bookingDetailsPanel" style="display:none; position:fixed; top:0; right:0; width:350px; height:100%; background:white; box-shadow:-5px 0 15px rgba(0,0,0,0.2); padding:20px; z-index:7000;">
-            <button id="detailsCloseBtn" style="background:#dc3545; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">✖ Close</button>
-            <h3 style="margin:20px 0;">Booking Details</h3>
+            <button id="detailsCloseBtn" style="background:#6c757d; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">✖ Close</button>
+            <h3 style="margin:30px 0 20px; border-bottom: 2px solid #eee; padding-bottom:10px;">Booking Info</h3>
             <div id="bookingDetailsContent"></div>
         </div>
     </div>
@@ -241,11 +245,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const db = new FirebaseDB();
 
-    // --- CALENDAR LOGIC ---
+    // --- CALENDAR ---
     class CalendarController {
         constructor() { this.currentDate = new Date(); this.colors = new Map(); }
         getColor(name) {
-            if(!this.colors.has(name)) this.colors.set(name, `hsl(${Math.random() * 360}, 70%, 45%)`);
+            if(!this.colors.has(name)) this.colors.set(name, `hsl(${Math.random() * 360}, 65%, 40%)`);
             return this.colors.get(name);
         }
         async renderCalendar() {
@@ -254,24 +258,19 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("calendarMonth").textContent = `${monthNames[m]} ${y}`;
             const grid = document.getElementById("calendarGrid");
             grid.innerHTML = "";
-
             ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d => {
                 const h = document.createElement("div"); h.className = "calendar-day-head"; h.textContent = d; grid.appendChild(h);
             });
-
             const first = new Date(y, m, 1).getDay();
             const last = new Date(y, m + 1, 0).getDate();
             for(let i=0; i<first; i++) grid.appendChild(document.createElement("div"));
-
             const bs = await db.getAll();
             for(let day=1; day<=last; day++) {
-                const cell = document.createElement("div");
-                cell.innerHTML = `<strong>${day}</strong>`;
+                const cell = document.createElement("div"); cell.innerHTML = `<strong>${day}</strong>`;
                 const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                
                 bs.filter(b => b.date === dateStr).forEach(b => {
                     const item = document.createElement("div");
-                    item.style.cssText = `background:${this.getColor(b.clientName)}; color:white; padding:4px; font-size:11px; border-radius:4px; margin-top:4px; cursor:pointer; overflow:hidden; white-space:nowrap;`;
+                    item.style.cssText = `background:${this.getColor(b.clientName)}; color:white; padding:4px; font-size:11px; border-radius:4px; margin-top:4px; cursor:pointer; overflow:hidden;`;
                     item.textContent = `${b.startTime} - ${b.clientName}`;
                     item.onclick = (e) => {
                         e.stopPropagation();
@@ -280,8 +279,8 @@ document.addEventListener("DOMContentLoaded", () => {
                             <p><strong>Client:</strong> ${b.clientName}</p>
                             <p><strong>Date:</strong> ${b.date}</p>
                             <p><strong>Time:</strong> ${b.startTime} - ${b.endTime}</p>
-                            <p><strong>Total:</strong> AED ${b.totalPayment.toFixed(2)}</p>
-                            <button class="btn" style="background:#dc3545; width:100%; margin-top:20px;" onclick="window.delBooking('${b.id}')">Delete Booking</button>
+                            <p><strong>Revenue:</strong> AED ${b.totalPayment.toFixed(2)}</p>
+                            <button class="btn" style="background:#dc3545; width:100%; margin-top:20px;" onclick="window.delBooking('${b.id}')">Remove Entry</button>
                         `;
                         document.getElementById("bookingDetailsPanel").style.display = "block";
                     };
@@ -295,7 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const calendar = new CalendarController();
 
-    // --- DASHBOARD LOGIC ---
+    // --- DASHBOARD ---
     async function updateDashboard() {
         const bs = await db.getAll();
         const now = new Date();
@@ -310,14 +309,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const years = [...new Set(bs.map(b => new Date(b.date).getFullYear()))].sort((a,b)=>b-a);
         if(years.length === 0) years.push(curY);
-        
         const setupFilter = (id, type) => {
             const el = document.getElementById(id); if(el.options.length > 0) return;
             if(type === 'y') years.forEach(y => el.innerHTML += `<option value="${y}">${y}</option>`);
             if(type === 'm') monthNames.forEach((m,i) => el.innerHTML += `<option value="${i}">${m}</option>`);
             el.value = (type === 'y') ? curY : curM;
         };
-
         ['pRevY','rCliY','yearFilter'].forEach(id => setupFilter(id, 'y'));
         ['pRevM','rCliM'].forEach(id => setupFilter(id, 'm'));
 
@@ -327,7 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
                        .reduce((acc, b) => { acc[b.pitch] = (acc[b.pitch] || 0) + b.totalPayment; return acc; }, {});
         document.getElementById('pitchRevenueBreakdown').innerHTML = Object.keys(pRev).length ? Object.entries(pRev).map(([p,r]) => `
             <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><strong>${p}:</strong><span>AED ${r.toLocaleString()}</span></div>
-        `).join('') : '<div class="empty-state">No pitch data</div>';
+        `).join('') : '<div class="empty-state">No data for selection</div>';
 
         const ry = parseInt(document.getElementById('rCliY').value);
         const rm = parseInt(document.getElementById('rCliM').value);
@@ -344,12 +341,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
         if(monthlyRevenueChart) monthlyRevenueChart.destroy();
         monthlyRevenueChart = new Chart(ctx, {
-            type: 'bar', data: { labels: monthNames.map(m=>m.slice(0,3)), datasets: [{ label: 'Revenue', data: chartData, backgroundColor: '#667eea' }]},
+            type: 'bar', data: { labels: monthNames.map(m=>m.slice(0,3)), datasets: [{ label: 'Revenue (AED)', data: chartData, backgroundColor: '#667eea', borderRadius: 5 }]},
             options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
-    // --- BOOKING LOGIC & FILTERS ---
+    // --- BOOKING FILTERS & TABLE ---
     async function displayBookings() {
         const bs = await db.getAll();
         const cf = document.getElementById('filterClientName').value.toLowerCase();
@@ -374,16 +371,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `).join('');
     }
 
-    window.delBooking = async (id) => { if(confirm("Permanently delete this booking?")) { await db.delete(id); location.reload(); }};
+    window.delBooking = async (id) => { if(confirm("Permanently delete this entry?")) { await db.delete(id); location.reload(); }};
 
-    // --- EXPORT / IMPORT / REPORT ---
-    document.getElementById('exportButton').onclick = async () => {
-        const bs = await db.getAll();
-        const ws = XLSX.utils.json_to_sheet(bs);
-        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Bookings");
-        XLSX.writeFile(wb, "Palace_Sports_Export.xlsx");
-    };
-
+    // --- ENHANCED AI REPORT ---
     document.getElementById('reportButton').onclick = async () => {
         const bs = await db.getAll();
         const years = [...new Set(bs.map(b => new Date(b.date).getFullYear()))].sort((a,b)=>b-a);
@@ -394,24 +384,63 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('report-modal-overlay').style.display = 'flex';
     };
 
+    const createChartImg = (config) => {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas'); canvas.width = 400; canvas.height = 200; canvas.style.display = 'none';
+            document.body.appendChild(canvas);
+            new Chart(canvas.getContext('2d'), { ...config, options: { ...config.options, animation: false, responsive: false, devicePixelRatio: 2 }});
+            setTimeout(() => { const img = canvas.toDataURL('image/png'); document.body.removeChild(canvas); resolve(img); }, 600);
+        });
+    };
+
     document.getElementById('generateFinalReport').onclick = async () => {
         const { jsPDF } = window.jspdf; const doc = new jsPDF();
         const yr = parseInt(document.getElementById('reportYearSelect').value);
         const sM = parseInt(document.getElementById('reportStartMonth').value);
         const eM = parseInt(document.getElementById('reportEndMonth').value);
         const bs = (await db.getAll()).filter(b => { const d = new Date(b.date); return d.getFullYear() === yr && d.getMonth() >= sM && d.getMonth() <= eM; });
-        doc.text(`Revenue Report: ${monthNames[sM]} - ${monthNames[eM]} ${yr}`, 14, 20);
-        doc.autoTable({ startY: 30, head: [['Date', 'Pitch', 'Client', 'Revenue']], body: bs.map(b => [b.date, b.pitch, b.clientName, `AED ${b.totalPayment.toFixed(2)}`]) });
-        doc.save("Palace_Sports_Report.pdf");
+
+        if(!bs.length) { alert("No data for period"); return; }
+
+        const totalRev = bs.reduce((s, b) => s + b.totalPayment, 0);
+        const pitchStats = bs.reduce((acc, b) => {
+            if (!acc[b.pitch]) acc[b.pitch] = { revenue: 0, count: 0 };
+            acc[b.pitch].revenue += b.totalPayment; acc[b.pitch].count += 1; return acc;
+        }, {});
+
+        doc.setFontSize(22); doc.text("Business Performance AI Report", 14, 20);
+        doc.setFontSize(12); doc.text(`${monthNames[sM]} - ${monthNames[eM]} ${yr} | Total: AED ${totalRev.toLocaleString()}`, 14, 30);
+
+        doc.autoTable({ startY: 40, head: [['Pitch', 'Bookings', 'Revenue']], body: Object.entries(pitchStats).map(([n, d]) => [n, d.count, `AED ${d.revenue.toFixed(2)}`]) });
+
+        const barImg = await createChartImg({ type: 'bar', data: { labels: monthNames.slice(sM, eM+1), datasets: [{ label: 'Revenue', data: Array(eM-sM+1).fill(0).map((_,i) => bs.filter(b=>new Date(b.date).getMonth()===(sM+i)).reduce((s,b)=>s+b.totalPayment,0)), backgroundColor: '#667eea' }]}});
+        doc.addImage(barImg, 'PNG', 14, doc.lastAutoTable.finalY + 10, 90, 50);
+
+        const pieImg = await createChartImg({ type: 'pie', data: { labels: Object.keys(pitchStats), datasets: [{ data: Object.values(pitchStats).map(v=>v.count), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'] }]}});
+        doc.addImage(pieImg, 'PNG', 110, doc.lastAutoTable.finalY + 10, 80, 50);
+
+        doc.setFontSize(14); doc.text("AI Insights & Solutions", 14, doc.lastAutoTable.finalY + 70);
+        doc.setFontSize(10);
+        let insights = "Analysis: ";
+        const top = Object.entries(pitchStats).sort((a,b)=>b[1].revenue-a[1].revenue)[0];
+        insights += `Primary revenue driver is ${top[0]}. Solution: Maximize peaks with surge pricing. `;
+        if(Object.keys(pitchStats).length > 1) {
+            const bot = Object.entries(pitchStats).sort((a,b)=>a[1].count-b[1].count)[0];
+            insights += `Bottleneck: ${bot[0]} has low usage. Solution: Targeted 'off-peak' discounts.`;
+        }
+        doc.text(doc.splitTextToSize(insights, 180), 14, doc.lastAutoTable.finalY + 80);
+
+        doc.save(`Performance_Report_${yr}.pdf`);
         document.getElementById('report-modal-overlay').style.display = 'none';
     };
 
-    // --- EVENTS & INIT ---
+    // --- APP CONTROLS ---
     document.getElementById('loginButton').onclick = () => {
         if(document.getElementById('username').value === "EPsports2025" && document.getElementById('password').value === "EPsport@25") {
             localStorage.setItem('isLoggedIn', 'true'); showApp();
         } else { document.getElementById('login-error').style.display = 'block'; }
     };
+    document.getElementById('signOutButton').onclick = () => { localStorage.removeItem('isLoggedIn'); location.reload(); };
 
     document.getElementById('addBookingButton').onclick = async () => {
         const data = {
@@ -420,6 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
             startTime: document.getElementById('startTime').value, endTime: document.getElementById('endTime').value,
             pricePerHour: parseFloat(document.getElementById('pricePerHour').value || 0)
         };
+        if(!data.pitch || !data.clientName || !data.date) return alert("Please fill required fields");
         const rType = document.getElementById('recurringType').value;
         const rCount = parseInt(document.getElementById('recurringCount').value) || 1;
         for(let i=0; i < (rType === 'none' ? 1 : rCount); i++) {
@@ -429,10 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
         location.reload();
     };
 
-    document.getElementById('recurringType').onchange = (e) => {
-        document.getElementById('recurring-options').style.display = (e.target.value === 'none' ? 'none' : 'block');
-    };
-
+    document.getElementById('recurringType').onchange = (e) => { document.getElementById('recurring-options').style.display = (e.target.value === 'none' ? 'none' : 'block'); };
     document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
         document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
         document.querySelectorAll('.tab').forEach(tb => tb.classList.remove('active'));
@@ -442,9 +469,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if(t.dataset.tab === 'calendar') calendar.renderCalendar();
     });
 
-    ['pRevM','pRevY','rCliM','rCliY','yearFilter'].forEach(id => document.getElementById(id).onchange = updateDashboard);
-    
-    // ATTACH BOOKING FILTERS
+    ['startTime','endTime','pricePerHour'].forEach(id => document.getElementById(id).oninput = () => {
+        const s = document.getElementById('startTime').value, e = document.getElementById('endTime').value, p = parseFloat(document.getElementById('pricePerHour').value || 0);
+        if(s && e) {
+            const h = (new Date(`1970-01-01T${e}`) - new Date(`1970-01-01T${s}`)) / 3600000;
+            document.getElementById('totalHours').value = h.toFixed(2);
+            document.getElementById('totalPayment').value = (h * p).toFixed(2);
+        }
+    });
+
+    // ATTACH FILTERS
     document.getElementById('filterClientName').oninput = displayBookings;
     document.getElementById('filterPitch').onchange = displayBookings;
     document.getElementById('filterMonth').onchange = displayBookings;
@@ -454,19 +488,14 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('nextMonthBtn').onclick = () => calendar.navigateMonth(1);
     document.getElementById('todayBtn').onclick = () => calendar.goToToday();
     document.getElementById('detailsCloseBtn').onclick = () => document.getElementById('bookingDetailsPanel').style.display = 'none';
-
-    ['startTime', 'endTime', 'pricePerHour'].forEach(id => {
-        document.getElementById(id).oninput = () => {
-            const s = document.getElementById('startTime').value;
-            const e = document.getElementById('endTime').value;
-            const p = parseFloat(document.getElementById('pricePerHour').value || 0);
-            if(s && e) {
-                const h = (new Date(`1970-01-01T${e}`) - new Date(`1970-01-01T${s}`)) / 3600000;
-                document.getElementById('totalHours').value = h.toFixed(2);
-                document.getElementById('totalPayment').value = (h * p).toFixed(2);
-            }
-        };
-    });
+    document.getElementById('closeReportModal').onclick = () => document.getElementById('report-modal-overlay').style.display = 'none';
+    
+    document.getElementById('exportButton').onclick = async () => {
+        const bs = await db.getAll();
+        const ws = XLSX.utils.json_to_sheet(bs);
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Bookings");
+        XLSX.writeFile(wb, "Palace_Sports_Data.xlsx");
+    };
 
     function showApp() {
         document.getElementById('login-screen').style.display = 'none';
