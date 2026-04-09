@@ -308,7 +308,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }).reduce((s,b)=>s+b.totalPayment,0).toLocaleString()}`;
         document.getElementById('totalBookingsCount').textContent = bs.length;
 
-        // Init Year Filters
         const years = [...new Set(bs.map(b => new Date(b.date).getFullYear()))].sort((a,b)=>b-a);
         if(years.length === 0) years.push(curY);
         
@@ -322,7 +321,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ['pRevY','rCliY','yearFilter'].forEach(id => setupFilter(id, 'y'));
         ['pRevM','rCliM'].forEach(id => setupFilter(id, 'm'));
 
-        // Pitch Revenue
         const py = parseInt(document.getElementById('pRevY').value);
         const pm = parseInt(document.getElementById('pRevM').value);
         const pRev = bs.filter(b => { const d = new Date(b.date); return d.getFullYear() === py && d.getMonth() === pm; })
@@ -331,7 +329,6 @@ document.addEventListener("DOMContentLoaded", () => {
             <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><strong>${p}:</strong><span>AED ${r.toLocaleString()}</span></div>
         `).join('') : '<div class="empty-state">No pitch data</div>';
 
-        // Repeat Client Revenue
         const ry = parseInt(document.getElementById('rCliY').value);
         const rm = parseInt(document.getElementById('rCliM').value);
         const clientCounts = bs.reduce((acc, b) => { acc[b.clientName] = (acc[b.clientName] || 0) + 1; return acc; }, {});
@@ -341,7 +338,6 @@ document.addEventListener("DOMContentLoaded", () => {
             <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><strong>${c}:</strong><span>AED ${r.toLocaleString()}</span></div>
         `).join('') : '<div class="empty-state">No repeat clients</div>';
 
-        // Trend Chart
         const cy = parseInt(document.getElementById('yearFilter').value);
         const chartData = Array(12).fill(0);
         bs.filter(b => new Date(b.date).getFullYear() === cy).forEach(b => chartData[new Date(b.date).getMonth()] += b.totalPayment);
@@ -353,9 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- OTHER UI LOGIC ---
-    window.delBooking = async (id) => { if(confirm("Permanently delete this booking?")) { await db.delete(id); location.reload(); }};
-
+    // --- BOOKING LOGIC & FILTERS ---
     async function displayBookings() {
         const bs = await db.getAll();
         const cf = document.getElementById('filterClientName').value.toLowerCase();
@@ -379,6 +373,8 @@ document.addEventListener("DOMContentLoaded", () => {
             </tr>
         `).join('');
     }
+
+    window.delBooking = async (id) => { if(confirm("Permanently delete this booking?")) { await db.delete(id); location.reload(); }};
 
     // --- EXPORT / IMPORT / REPORT ---
     document.getElementById('exportButton').onclick = async () => {
@@ -447,10 +443,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     ['pRevM','pRevY','rCliM','rCliY','yearFilter'].forEach(id => document.getElementById(id).onchange = updateDashboard);
+    
+    // ATTACH BOOKING FILTERS
+    document.getElementById('filterClientName').oninput = displayBookings;
+    document.getElementById('filterPitch').onchange = displayBookings;
+    document.getElementById('filterMonth').onchange = displayBookings;
+    document.getElementById('filterYear').onchange = displayBookings;
+
     document.getElementById('prevMonthBtn').onclick = () => calendar.navigateMonth(-1);
     document.getElementById('nextMonthBtn').onclick = () => calendar.navigateMonth(1);
     document.getElementById('todayBtn').onclick = () => calendar.goToToday();
     document.getElementById('detailsCloseBtn').onclick = () => document.getElementById('bookingDetailsPanel').style.display = 'none';
+
+    ['startTime', 'endTime', 'pricePerHour'].forEach(id => {
+        document.getElementById(id).oninput = () => {
+            const s = document.getElementById('startTime').value;
+            const e = document.getElementById('endTime').value;
+            const p = parseFloat(document.getElementById('pricePerHour').value || 0);
+            if(s && e) {
+                const h = (new Date(`1970-01-01T${e}`) - new Date(`1970-01-01T${s}`)) / 3600000;
+                document.getElementById('totalHours').value = h.toFixed(2);
+                document.getElementById('totalPayment').value = (h * p).toFixed(2);
+            }
+        };
+    });
 
     function showApp() {
         document.getElementById('login-screen').style.display = 'none';
