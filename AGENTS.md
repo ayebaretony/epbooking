@@ -78,8 +78,12 @@ This is a snapshot. Re-run the backup script before relying on it.
 
 ### Location and branching
 - **The project lives on the owner's internal disk** at `~/Desktop/epbooking-react` (agreed 2026-10-10), because installs on the external exFAT drive are slow and macOS leaves `._*` files. The external drive (`/Volumes/Tony/footballbooking`) holds the legacy files, backups and this `AGENTS.md`.
-- It is a git clone of this repo on a `react-rebuild` branch. `main` keeps serving the legacy site until cutover (§7).
-- Copy `AGENTS.md` (this file) and `scripts/` into the project so agents there follow the same rules.
+- It is a git clone of this repo on a `react-rebuild` branch (started from the `docs/agents-md-and-backup-script` branch, so this file and `scripts/` are already here). `main` keeps serving the legacy site until cutover (§7).
+- The legacy `index.html` and `firebase-config.js` were moved to `legacy/` on this branch so Vite can have its own root `index.html`. The live site is unaffected because it is served from `main`.
+- **Phase 0 status (2026-10-10):** scaffold, config, emulator wiring, typed models and the pure logic helpers (`src/lib/money.ts`, `conflicts.ts`, `time.ts`) are in place, with `npm test`, `npm run build` and `npm run lint` passing. Colour tokens and UI primitives are **waiting for the owner's designs**.
+- **There is deliberately no `.firebaserc` and no deploy script**, and `firestore.rules` is a deny-all placeholder. Deploying it to `pitchbookingsystem-6e222` would lock the live legacy app out. Add them only at cutover (§7), with the owner's go-ahead.
+- Unit tests use Node's built-in runner (`npm test`, no extra dependency). Keep the logic in `src/lib` pure so it stays testable this way.
+- The Firestore emulator needs **Java 17+**. It was not installed on the owner's Mac at the time of writing.
 
 ### Hard constraints
 1. **Budget is zero.** Stay within the Firebase **Spark (free) plan**.

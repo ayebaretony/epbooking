@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// PLACEHOLDER for the emulator only: denies everything.
+//
+// !!! DO NOT DEPLOY THIS FILE to pitchbookingsystem-6e222. The live legacy app has no sign-in, so deploying any
+// locked rules before the planned cutover (AGENTS.md section 7) would lock the owner and staff out of their bookings.
+//
+// Phase 1 replaces this with the real rules (users, pitches, reservations, slots, blocks, settings).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
