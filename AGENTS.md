@@ -1,155 +1,226 @@
-# AGENTS.md — Palace Sports Pitch Booking System
+# AGENTS.md — Palace Sports Pitch Booking System (React rebuild)
 
-Instructions for AI code agents working on this project. Read this fully before changing anything.
+Instructions for AI code agents working on this project. Read this fully before changing anything, and re-read the relevant section before each phase.
 
-## 1. What this is
+**Owner context:** the owner is a sports business owner, not a professional developer. Explain things in plain language, and give exact step-by-step instructions for anything done in the Firebase console or terminal. Never assume prior DevOps knowledge.
 
-An internal management portal for **Palace Sports** (football pitch rental, prices in **AED**). It has been in daily production use for about a year, so real business data depends on it.
+## 1. What this is, and where it stands
 
-- **Live site:** https://ayebaretony.github.io/epbooking/ (GitHub Pages)
-- **Repo:** `ayebaretony/epbooking` on GitHub. This local folder (`/Volumes/Tony/footballbooking`) started empty. Clone or pull the repo into it before editing, and don't recreate files from memory.
-- **Backend:** Firebase project `pitchbookingsystem-6e222`, Cloud Firestore. Config is in `firebase-config.js`.
-- **Users:** the owner and staff, who book pitches and read revenue. There is no public customer-facing booking yet.
+An internal management portal for **Palace Sports** (football pitch rental, prices in **AED**, timezone **Asia/Dubai**). The owner and staff book pitches and track revenue. There is no customer-facing booking.
 
-### Current architecture (as of 2026-10)
+There are two apps. Don't confuse them.
 
-- No build step, bundler, package manager or framework. It is static files served as-is.
-- `index.html` holds all HTML, CSS and JS (about 500 lines, one inline `<script>`). `firebase-config.js` holds the Firebase web config.
-- Libraries load from CDNs:
-  - Firebase 9.6.1 **compat** SDK (`firebase-app-compat`, `firebase-firestore-compat`)
-  - Chart.js (unpinned)
-  - SheetJS `xlsx@0.18.5`
-  - jsPDF 2.5.1 and jspdf-autotable 3.5.25
-- Three tabs: **Bookings** (form, filters, table), **Dashboard** (revenue cards and chart), **Calendar** (monthly grid with a detail side panel).
-- Features: recurring bookings (weekly or monthly), Excel export, PDF "AI Analysis" report.
-- Pitches (hard-coded in several places): `Fifa Pitch`, `Junior Football Pitch`, `Airdome`, `Half Pitch`. Default price is 500 AED/hr.
+| | Legacy app (live today) | New React app (being built) |
+|---|---|---|
+| Where | https://ayebaretony.github.io/epbooking/ (`index.html` + `firebase-config.js` on `main`) | Local folder on the owner's internal disk (see §4), pushed to this repo on a `react-rebuild` branch |
+| Stack | One HTML file, Firebase compat SDK from CDNs | React + TypeScript + Vite (see §4) |
+| Data | Firestore collection `bookings` | **New** Firestore collections (see §5). `bookings` is left untouched |
+| Auth | Fake (hard-coded in the page) | Real Firebase Authentication |
+
+- **Firebase project (shared by both):** `pitchbookingsystem-6e222` (Cloud Firestore). The new app uses the **same project**, so the data stays where it is.
+- **Reference project:** the owner's other app, **Servly** (`/Users/tony/Desktop/servly/servlycode`, a tennis court booking system), is the template for stack, folder structure, conventions, Firestore rules and the double-booking guard. Read its `AGENTS.md`, `firestore.rules` and `src/` before writing code, and reuse its patterns. Servly is read-only reference. Never edit it, and never copy its `.env.local` or touch its Firebase project (`servly-87915`).
+- **Repo:** `ayebaretony/epbooking` (**public**). Never commit secrets, backups or data exports.
 
 ## 2. Prime directive: protect the production data
 
 The Firestore database holds a year of real bookings and revenue history. **Losing, corrupting or silently reshaping it is the worst possible outcome.**
 
 1. **Never** delete, overwrite, bulk-update or "migrate" documents in the live database without the owner's explicit approval in chat for that specific operation.
-2. **Never** run any script against the live project (including read-only ones that could be mistaken for writes) without saying what it will do first.
-3. Before any schema change or migration:
-   - Export a full backup of the `bookings` collection (Firebase console export, or a script that dumps JSON to a local file). Confirm the backup is non-empty and its document count matches.
-   - Write the migration as an idempotent script with a `--dry-run` mode. Run the dry run first and show the owner the diff.
-   - Prefer **additive** changes (new fields, new collections). Don't rename or remove existing fields.
-4. Develop and test against a **separate Firebase project or the Firestore emulator** (`firebase emulators:start`), never the production project. If no dev project exists, creating one is the first task, so ask the owner. Do not point local dev at `pitchbookingsystem-6e222`.
-5. Treat deploys as irreversible for the owner's workflow. The live site is the real app, so deploy only when asked, and work on a branch.
+2. **The legacy `bookings` collection is read-only for all new work.** Never write to it, rename its fields or delete from it. It stays as the archive and the rollback path.
+3. All new data goes into **new collections** (§5). Migration is a **copy**, never an in-place change.
+4. Before anything that could affect data, run a fresh backup: `python3 scripts/backup_bookings.py`. It is read-only, pages through the whole collection, cross-checks the count and writes JSON into `backups/` (git-ignored, because it holds client personal data). The latest verified backup is `backups/bookings-20261010-202009.json` (482 documents).
+5. Every migration or bulk-write script must be **idempotent** (safe to run twice), have a **`--dry-run`** mode, and **verify afterwards** (document counts and revenue totals must match the source). Show the owner the dry-run output before the real run.
+6. Develop and test against the **Firebase Emulator Suite**, never against `pitchbookingsystem-6e222`. Load the backup into the emulator to test with realistic data.
+7. Deploy only when asked. Work on branches, not on `main`.
 
-## 3. Data model (Firestore)
+## 3. Legacy data (what exists today)
 
-Collection **`bookings`**, one document per booking. Document IDs are auto-generated. Fields written by the current app:
+Collection **`bookings`** in `pitchbookingsystem-6e222`, one document per booking, auto-generated IDs:
 
 | Field | Type | Notes |
 |---|---|---|
-| `pitch` | string | One of the four pitch names above |
-| `clientName` | string | Free text. Also the identity used to group "repeat clients" |
-| `contact` | string | Phone or email, free text |
-| `date` | string | `YYYY-MM-DD`. A **string**, not a Timestamp. Queried with `orderBy("date")` |
-| `startTime` | string | `HH:mm` (24h) |
-| `endTime` | string | `HH:mm` (24h) |
-| `pricePerHour` | number | AED |
-| `hours` | number | Computed on write: `(end - start) / 3600000` |
-| `totalPayment` | number | Computed on write: `hours * pricePerHour` |
+| `pitch` | string | `Fifa Pitch`, `Airdome`, `Junior Football Pitch`, `Half Pitch` |
+| `clientName` | string | Free text |
+| `contact` | string | Phone number (8 are empty) |
+| `date` | string | `YYYY-MM-DD` (a string, not a Timestamp) |
+| `startTime` / `endTime` | string | `HH:mm` (24h) |
+| `pricePerHour` | number | AED, can have decimals (e.g. 527.1) |
+| `hours` | number | Stored at write time |
+| `totalPayment` | number | Stored at write time, AED |
 
-**Verified against a real backup (2026-10-10, 482 documents):** every document has exactly the nine fields above, with no missing fields and consistent types. All `date` values are valid `YYYY-MM-DD` strings and all times are `HH:mm`. `totalPayment == hours * pricePerHour` holds for every document. There are no zero or negative durations and no exact duplicates. Dates run from 2025-04-02 to 2027-01-29, so **future bookings exist** (recurring series). Pitch counts: Fifa Pitch 308, Airdome 107, Junior Football Pitch 44, Half Pitch 23. 8 documents have an empty `contact`. `pricePerHour` is not always 500 (common values include 750, 600, 400, 650, 527.1, 224.07), so never assume a flat rate. Numbers are mixed int and float, so don't assume either. Treat this as a snapshot and re-run the backup script before relying on it.
+**Verified against the backup of 2026-10-10 (482 documents):**
+- Every document has exactly these nine fields, with consistent types. `totalPayment == hours * pricePerHour` for all of them.
+- Dates run from **2025-04-02 to 2027-01-29**. **46 bookings are in the future** (recurring series).
+- Pitch counts: Fifa Pitch 308, Airdome 107, Junior Football Pitch 44, Half Pitch 23.
+- Opening hours in practice: **07:00 to 23:00**. Every start and end time is on a **30-minute grid**. Nothing runs past midnight.
+- **No two bookings overlap on the same pitch.** There are **55 overlaps across different pitches** (Fifa Pitch with Airdome 33, with Junior 13, with Half Pitch 9). The business evidently allows them, so the double-booking rule is **per pitch** (§6).
+- Conversion is lossless: all prices have at most 2 decimals, all totals are whole fils, all durations are whole minutes. Contacts are all phone numbers (no emails).
+- Total revenue in the backup is about AED 497,908. Revenue totals must match after migration, to the fils.
+- Prices vary (750, 600, 400, 650, 527.1, 224.07 and others). Never assume a flat rate.
 
-**Backups:** run `python3 scripts/backup_bookings.py`. It is read-only, pages through the whole collection, cross-checks the count against Firestore, and writes JSON into `backups/` (git-ignored, because it holds client personal data and the repo is public). Run it before any task that could affect data. The latest verified backup is `backups/bookings-20261010-202009.json`. It must be restorable: if you change the schema, also keep a restore or migration script that has been tested on the emulator.
+This is a snapshot. Re-run the backup script before relying on it.
 
-**UI redesign rule:** the owner is redesigning the UI. A redesign may change how bookings are shown and entered, but it must keep reading and writing the fields above exactly as they are (same names, types and formats), so existing data and any not-yet-updated screens keep working. Any new data needs go through additive fields or new collections (see below), agreed with the owner first.
+## 4. New React app
 
-Rules for working with this model:
+### Stack (approved, mirrors Servly)
 
-- **Treat the schema above as a contract.** Old documents must keep rendering. Code must tolerate missing or odd fields: older docs may lack `contact`, `hours` or `totalPayment`, or have inconsistent values. Inspect real data (read-only, and with owner awareness) before assuming a field always exists.
-- Keep `date` as a `YYYY-MM-DD` string unless a migration is explicitly approved. Dates and times are the business's local time. Do not store UTC timestamps in these fields.
-- Keep `hours` and `totalPayment` as stored values, because the dashboard, Excel export and reports sum `totalPayment` directly. If you change how they're calculated, existing documents must not change.
-- New collections (for example `clients`, `pitches`, `payments`, `users`) are fine and preferred over bloating `bookings`. Link them by new fields and leave existing docs alone.
-- Recurring bookings are written as N independent documents. There is no series ID. If you add one (for example `seriesId`), make it optional.
+| Concern | Choice |
+|---|---|
+| Framework | React 18 + Vite + TypeScript (strict) |
+| Styling | Tailwind CSS (design tokens defined once as theme tokens or CSS variables, never hard-coded hex in components) |
+| Routing | React Router |
+| Backend | Firebase **modular** SDK v9+: Auth + Firestore (never the compat API) |
+| Dates | `date-fns` + `date-fns-tz` |
+| Charts | Recharts |
+| Icons | `lucide-react` |
+| Local dev | Firebase Emulator Suite (Auth + Firestore) |
+| Hosting | Firebase Hosting (free Spark plan). GitHub Pages can't serve client-side routes well. Confirm with the owner |
 
-## 4. Known issues in the current code
+### Location and branching
+- **The project lives on the owner's internal disk** at `~/Desktop/epbooking-react` (agreed 2026-10-10), because installs on the external exFAT drive are slow and macOS leaves `._*` files. The external drive (`/Volumes/Tony/footballbooking`) holds the legacy files, backups and this `AGENTS.md`.
+- It is a git clone of this repo on a `react-rebuild` branch. `main` keeps serving the legacy site until cutover (§7).
+- Copy `AGENTS.md` (this file) and `scripts/` into the project so agents there follow the same rules.
 
-These are verified against the live source. Fix them deliberately and one at a time. Don't mention or change them as a drive-by inside an unrelated task.
+### Hard constraints
+1. **Budget is zero.** Stay within the Firebase **Spark (free) plan**.
+2. **No Cloud Functions** (they need the paid plan). Do logic in the client with Firestore transactions and security rules.
+3. **No other paid or third-party backend services.** Ask first.
+4. **No new dependencies without asking.** State what, why and its size, then wait. The Servly stack above is pre-approved.
+5. **Never commit secrets.** The Firebase web config goes in `.env.local` (git-ignored), with `.env.example` committed (same pattern as Servly). The web API key is not a secret, but keep config out of source anyway.
+6. **Don't invent features.** Suggest them at the end of a task instead.
+7. **Match the owner's approved designs.** The UI is being designed by the owner (Flowstep and screenshots). Do not redesign. Until designs exist, build only unstyled or primitive components and the data and logic layers.
 
-**Security (highest priority)**
-- **Login is fake.** Username and password are hard-coded in client-side JS (visible to anyone who views the page source on a public repo), and "logged in" is just `localStorage.isLoggedIn = 'true'`. Anyone can bypass it from the console.
-- **Firestore security rules are confirmed fully open** (checked by the owner 2026-10-10): `match /{document=**} { allow read, write; }`, which is the Firebase "test mode" default with its expiry condition removed. Anyone who knows the project ID (it is in the public repo) can read, edit and delete every booking, including client names and contact details. The Firebase web `apiKey` in `firebase-config.js` is not a secret, since it is designed to be public, but with open rules nothing else protects the data.
-- **Do not simply lock the rules.** The app has no Firebase Auth yet, so locking them now would break the live app for staff. Order of work: backup, then ship Auth in the app, then tighten the rules (§6 step 2).
-- **Fix direction:** Firebase Authentication (email/password) plus Firestore rules that require `request.auth != null` (and a role or allow-list for write access). The hard-coded credentials must be removed from the code. They remain in git history, so tell the owner the old password should be treated as compromised and changed everywhere it is reused. **Never print, log or copy those credentials into new files, docs, commits or chat.**
-- **XSS:** client names, contact and pitch are interpolated into `innerHTML` and inline `onclick` strings without escaping (table, calendar, details panel). Use `textContent` or DOM APIs, or an escape helper. Never build handlers from `'${id}'` strings.
+### Folder structure (same as Servly)
+```
+/src
+  /app            router, providers, layout shell
+  /components/ui  Button, Card, Badge, Input, Select, Modal, Table, StatCard, Skeleton, Toast
+  /features       auth, dashboard, calendar, bookings, pitches, revenue, settings
+  /lib            firebase.ts, money.ts, time.ts, conflicts.ts
+  /types
+firestore.rules  firestore.indexes.json  firebase.json  .env.example
+/scripts          backup + migration (Node or Python), never run against production without approval
+```
+Feature folders own their hooks, components and Firestore queries. Components never call Firestore directly. They use hooks or a `*.service.ts` file.
 
-**Correctness**
-- **No double-booking check.** Two bookings for the same pitch and overlapping time can be created. Note that `Half Pitch` and `Fifa Pitch` physically overlap, so conflict rules need the owner's input.
-- **Overnight and invalid times:** if `endTime <= startTime`, hours come out negative or zero. Validate. Decide with the owner whether past-midnight bookings are allowed.
-- **Date handling bugs:** `new Date('YYYY-MM-DD')` is parsed as UTC, and recurring bookings use `toISOString()` (UTC), so dates can shift by a day in some timezones. Do date math on `YYYY-MM-DD` strings or with local-time constructors. Monthly recurrence via `setMonth` also drifts (Jan 31 becomes Mar 3).
-- **Validation gaps:** the form only checks pitch, client and date. It does not require contact or times, and does not check price or count bounds.
-- **"Repeat client" logic** counts all-time bookings by exact `clientName` string, so "John" and "john " are different clients. A real `clients` entity would fix this.
-- **Hard-coded year filters** (`2025`, `2026`) in the Bookings tab. Derive years from data.
-- **Delete is permanent** and has no undo. Prefer soft delete (`deletedAt` or `status: 'cancelled'`) for new work.
-- Calendar colours are random per page load. Make them deterministic (hash of client name).
-- The "AI Analysis" report is not AI. It is a few template rules over the data. Don't claim otherwise in the UI or docs, and don't wire a real LLM in without the owner's approval (privacy and cost).
+### Working rules
+- **Work in phases** (§8). Finish and verify one before the next. **Before coding a phase, post a short plan** (files to change, data touched). **After, summarise** what was built and how to test it.
+- One screen or feature per task. Don't touch unrelated files.
+- TypeScript strict, no `any` without a comment saying why.
+- Every data screen has **loading (skeleton), empty (friendly message plus action) and error (message plus retry)** states.
+- Forms: validate before submit, inline errors, disable submit while saving, success toast. **Confirm destructive actions** with a modal.
+- Run `npm run build` and `npm run lint` before declaring a task done.
+- When something is ambiguous, ask one clear question rather than guessing.
+- Keep code boring and readable: small functions, clear names, short comments explaining *why*.
+- Don't put real client names, phone numbers or emails in code, tests, screenshots, commits or chat. Use fake data (`Test Client`, `+971500000000`). Don't log customer details to the console.
 
-**Performance and structure**
-- `db.getAll()` downloads the **entire collection on every render** (each tab, each calendar navigation, each dashboard refresh). Cost and latency grow with the data. Fix by caching, using range queries (`where('date','>=',…)`), and `onSnapshot` for live updates.
-- Every write ends in `location.reload()`. Replace with in-place state updates.
-- One 500-line file with inline handlers and global `window.delBooking`. Split it when the owner wants (see §6).
+## 5. New data model (new collections in the same Firebase project)
 
-## 5. Working agreements for agents
+Collection names deliberately differ from the legacy `bookings`, so the old data and the old site stay untouched.
 
-**Process**
-- **Read before writing.** Open the files you'll touch. Don't rewrite files wholesale, and make focused diffs.
-- **Small, reviewable changes**, one concern per commit or branch. Use branches such as `feat/...` and `fix/...`. Don't commit directly to the deployed branch (probably `main`) unless the owner says to.
-- **Ask before** adding dependencies, changing the hosting or deploy method, introducing a framework or build tooling, changing the data model, or touching anything in §2.
-- **Don't invent requirements.** If a business rule is unclear (pricing tiers, deposits, cancellation policy, pitch overlap), ask and record the answer in §7.
-- Report outcomes honestly. If something wasn't tested, or only worked on the emulator, say so.
+```
+users/{uid}          displayName, email, role "admin"|"staff", active (bool), createdAt
+pitches/{pitchId}    name, surface, status "available"|"maintenance", color, sortOrder, archived
+reservations/{id}    pitchId, pitchName, customerName, customerPhone, customerEmail|null,
+                     date "YYYY-MM-DD" (Asia/Dubai), startAt, endAt (Timestamps), durationMinutes,
+                     hourlyRateMinor, totalMinor (integers, fils), status "confirmed"|"pending"|"cancelled",
+                     notes|null, createdBy, createdAt, updatedAt
+                     optional: seriesId (recurring), legacyId, source ("legacy-import")
+slots/{pitchId}_{date}_{HHmm}   one doc per occupied 30-minute slot: pitchId, date, reservationId|null, blockId|null
+blocks/{blockId}     pitchId, startAt, endAt, reason, createdBy
+settings/center      centerName, currency "AED", timezone "Asia/Dubai", openTime "07:00", closeTime "23:00", slotMinutes 30
+settings/security    idleTimeoutMinutes
+```
 
-**Code style**
-- Match the existing style (2-space or 4-space as the file already does, `const`/`let`, async/await, plain DOM APIs).
-- Keep the app working as a **static site on GitHub Pages**. No server-only code unless the owner approves an architecture change (for example Cloud Functions).
-- Pin CDN library versions. Don't add unpinned `@latest` URLs.
-- Keep the Firebase SDK use consistent: it is v9 **compat** now. Moving to the modular SDK is a separate, deliberate migration.
-- Mobile matters: staff use phones at the pitch. Keep layouts responsive and tap targets large.
-- Currency is AED. Format with `toLocaleString` and two decimals for money, consistently.
-- UI copy: plain English, short, no jargon.
+Differences from Servly: courts are **pitches** (`pitchId`/`pitchName`), the bookings collection is **`reservations`**, and **`closeTime` is `23:00`** (Servly's 22:00 would reject real bookings).
 
-**Secrets and privacy**
-- Don't put real client names, phone numbers or emails in code, tests, screenshots, commit messages or chat. Use obviously fake test data (`Test Client`, `+971500000000`).
-- Never commit service-account keys, admin credentials, `.env` files or database exports. Add backups and exports to `.gitignore`.
-- Client contact details are personal data. Don't expose them on any public page.
+### Money and time rules
+- Store money as **integer fils** (100 fils = 1 AED). Never floats. Format only through the shared formatter in `lib/money.ts` (`Intl.NumberFormat("en-AE", { style: "currency", currency: "AED" })`).
+- `totalMinor` is a snapshot. **Never recompute it later**, because historic totals must not change. For new bookings, total = `Math.round(hourlyRateMinor * durationMinutes / 60)`.
+- Pitches have **no price**. The hourly rate is typed on each booking, as in the legacy app.
+- Timestamps are UTC. "Today", "this month" etc. are computed in `Asia/Dubai`. The `date` string is the start date in that timezone and is the field used for range queries.
 
-**Testing**
-- There are no automated tests today. For any logic you add or change (hours and price calculation, overlap detection, recurrence, date handling), extract it into pure functions and add tests (Vitest or Node's built-in test runner is fine, once the owner approves tooling).
-- Manually verify in a browser against the **emulator or dev project**: create a booking, create a recurring series, delete one, check the dashboard totals, calendar, filters, Excel export and PDF report.
-- Before declaring work done, confirm that **existing documents still render** (open the Bookings, Dashboard and Calendar tabs on data that includes old records).
+### Legacy to new mapping (the migration)
 
-## 6. Suggested roadmap (confirm priority with the owner)
+| Legacy `bookings` | New `reservations` |
+|---|---|
+| doc ID | **same ID** (makes the migration idempotent), also stored as `legacyId` |
+| `pitch` (name) | `pitchId` (slug, e.g. `fifa-pitch`) + `pitchName`. Seed the 4 `pitches` docs first |
+| `clientName` | `customerName` |
+| `contact` | `customerPhone` (all current values are phone numbers). Empty stays `""`. `customerEmail: null` |
+| `date` | `date` (unchanged) |
+| `date` + `startTime` / `endTime` | `startAt` / `endAt` (Asia/Dubai to UTC) |
+| `hours` | `durationMinutes = round(hours * 60)` |
+| `pricePerHour` | `hourlyRateMinor = round(pricePerHour * 100)` |
+| `totalPayment` | `totalMinor = round(totalPayment * 100)` (copied, **not** recomputed) |
+| (none) | `status: "confirmed"`, `notes: null`, `createdBy: "legacy-import"`, `source: "legacy-import"`, `createdAt` / `updatedAt` = migration time |
 
-1. **Safety net:** document and test backup and restore. Create a dev Firebase project or emulator setup. Pull the repo locally.
-2. **Real authentication** and tightened Firestore rules (§4). Remove the hard-coded credentials.
-3. **Escape all rendered user data** (XSS) and add input validation.
-4. **Conflict detection** (no double-booking) and time validation.
-5. **Fix date and timezone handling**, and recurrence edge cases.
-6. **Data access layer:** cached or range queries and live snapshots instead of re-fetching everything, with no page reloads.
-7. **Editing bookings** (today it's only create and delete), plus soft-delete or cancel and a status field (`confirmed`, `cancelled`, `no-show`).
-8. **Payments tracking:** deposit, paid, balance (new field and collection, additive only).
-9. **Clients:** a `clients` collection for dedupe, history and loyalty.
-10. **Config in data, not code:** pitches, prices and opening hours in Firestore or one config module instead of copies in the HTML.
-11. **Code organisation:** split into `index.html`, `styles.css` and ES modules (still static, no build step unless approved).
-12. **Nice-to-haves:** WhatsApp or SMS reminders (via approved services), a public availability view, better reports and CSV or Excel import, PWA install on phones.
+Plus slot docs for each migrated reservation, so the double-booking guard also covers old and future bookings. The script must **report** any slot collision instead of failing, and verify: reservation count, sum of `totalMinor` equal to the legacy sum, and slot count equal to the total number of 30-minute slots.
 
-## 7. Decisions and business rules (fill in as the owner confirms)
+## 6. Double-booking guard (critical)
 
-- Deploy branch: `main` (GitHub Pages serves the live site from the repo). The repo is **public**, so never commit secrets or data exports.
-- This folder is on an external drive that creates macOS `._*` files. They are git-excluded locally (`.git/info/exclude`). If git reports `non-monotonic index` errors, delete any `._*` files under `.git/`.
-- Dev Firebase project / emulator: _none yet_
-- Do `Half Pitch` and `Fifa Pitch` conflict with each other? _unknown_
-- Are bookings past midnight allowed? _unknown_
-- Standard price list / peak pricing: _unknown (default 500 AED/hr)_
-- Cancellation / deposit policy: _unknown_
-- Who needs access (roles)? _unknown_
+Same design as Servly, applied **per pitch**:
 
-## 8. Quick reference
+1. Compute every slot key the reservation covers: `${pitchId}_${date}_${HHmm}` at 30-minute granularity.
+2. In one `runTransaction`, read all of those slot docs. **If any exists, abort** with "That time is no longer available". Otherwise write the reservation and all its slot docs together.
+3. Cancelling or editing deletes or rewrites the slot docs in the same transaction. Maintenance blocks write slot docs too.
+4. Security rules also reject creating a slot doc that already exists (no `update` on slots).
+5. Different pitches may overlap in time, because the current data shows the business allows it (§3). Whether `Half Pitch` physically shares space with `Fifa Pitch` is an **open decision** (§9).
+6. Recurring bookings are **in scope** (the legacy app has them and 46 future bookings came from them): create N independent reservations, each through the transaction, sharing an optional `seriesId`. Show the owner which dates conflict instead of silently skipping them.
+7. Test: overlapping times, back-to-back (allowed), same time on different pitches (allowed), cancel then rebook (allowed), two simultaneous attempts (one must fail).
 
-- Run locally: serve the folder statically (for example `python3 -m http.server 8000`) and open http://localhost:8000. Remember that this still talks to whichever Firebase project is in `firebase-config.js`. Use a dev config for local work (§2.4).
+## 7. Auth, security and cutover
+
+- Firebase Auth: email/password (Google sign-in optional, copy Servly). **Signing up does not grant access.** Only users with a `users/{uid}` doc with `active: true` and a valid role get in. Roles: **admin** (everything) and **staff** (create, edit and cancel reservations, view dashboards). The **first admin** is created by hand in the Firebase console (give the owner step-by-step instructions).
+- Write `firestore.rules` for real, based on Servly's file: deny by default, role checks per collection, field validation, slots create-only, nobody can change their own role. **Never `allow read, write: if true`.** Test the rules in the emulator, including attempts that must fail.
+
+**Current exposure:** the live rules are `allow read, write;` with no condition (confirmed 2026-10-10). Anyone who knows the project ID (it is in the public repo) can read, change and delete all bookings and client phone numbers. Deploying new rules is what closes this, and the **new rules will also lock the legacy site and the legacy `bookings` collection** (the legacy app has no sign-in). So this is a **cutover**, not a drop-in change. Do not deploy locked rules before the new app is ready.
+
+**Cutover sequence (each step needs the owner's go-ahead):**
+1. New app tested on the emulator with the backup loaded. Staff accounts and the first admin `users` doc created in the console.
+2. Staff stop using the legacy app (announce a time).
+3. Fresh backup, then run the migration against production **while the old rules are still in place** (dry run first, then real run, then verify counts and revenue totals).
+4. Deploy the new `firestore.rules` and the new app to Firebase Hosting together.
+5. Replace the legacy GitHub Pages `index.html` with a notice and link to the new app. The old hard-coded password stays in public git history, so treat it as compromised and never reuse it.
+6. Keep the legacy `bookings` collection untouched as an archive for at least 3 months.
+
+Don't print, log or copy the old credentials anywhere.
+
+## 8. Build phases
+
+Because the data is exposed until cutover, **get to cutover quickly**. Do the dashboard and revenue polish after it.
+
+- **Phase 0, Setup:** project on the internal disk, Vite + React + TS + Tailwind, Firebase emulators, `.env.example`, `firebase.json`, design tokens (from the owner's designs), UI primitives. Port `scripts/` and this file.
+- **Phase 1, Auth and shell:** login, auth guard, approval-pending screen, sidebar and topbar, `users` handling, first-draft `firestore.rules` plus rules tests.
+- **Phase 2, Pitches and settings:** pitches list and edit (status, colour), seed `settings/center` (07:00 to 23:00, 30-minute slots, `Asia/Dubai`, AED).
+- **Phase 3, Reservations:** new, edit and cancel modal with the **transactional conflict guard**, recurring bookings, list with filters, search, cursor pagination, CSV and Excel export. **Write the migration script and tests here** (copy the backup into the emulator, verify totals).
+- **Phase 4, Calendar:** month, week and day views, pitch colour legend, day panel, click-to-create, maintenance blocks. **Cutover (§7) can happen after this phase**, with the owner's go-ahead.
+- **Phase 5, Dashboard:** stat cards, today's timeline, revenue this month, recent reservations. Include the existing "top repeat clients" and "pitch earnings" views.
+- **Phase 6, Revenue and reports:** revenue by day, week, month and pitch, plus the PDF performance report the legacy app produced. (The legacy "AI Analysis" is template text, not real AI. Don't claim otherwise.)
+- **Phase 7, Hardening:** rules review and tests, index check, quota check, accessibility pass, empty-data walkthrough, handover notes.
+
+**Query discipline (Spark limits):** always query by a bounded date range, never load whole collections, paginate lists with `limit()` and `startAfter()`, use `getCountFromServer()` for totals, use `onSnapshot` only for today's view, cache pitches and settings, and commit composite indexes in `firestore.indexes.json`.
+
+**Definition of done:** matches the design, has loading, empty and error states, works on a phone-width screen, shows no hard-coded data, formats all money in AED through the shared formatter, `npm run build` and `npm run lint` pass, queries are bounded and indexed, and security rules cover every new collection or field.
+
+## 9. Decisions and business rules (confirm with the owner, don't assume)
+
+Defaults are in italics and should sit behind settings so they're easy to change.
+
+- Data approach: **copy into new collections** (decided 2026-10-10). Project folder: **internal disk** (decided 2026-10-10).
+- Hosting: *Firebase Hosting*. Deploy branch for the legacy site: `main`.
+- Do `Half Pitch` and `Fifa Pitch` (or any other pair) physically share space and need to block each other? *No: conflicts are per pitch only, matching current data.*
+- Opening hours: *07:00 to 23:00*. Are bookings past midnight allowed? *No.*
+- What counts as revenue? *Confirmed reservations only. Pending shown separately, cancelled excluded.*
+- Statuses (`confirmed`, `pending`, `cancelled`), payments and deposits tracking, a separate clients collection: *not in the first version* (customer details stay on each reservation, as today).
+- When to cut over: *after Phase 4*, or later if the owner needs the dashboard first. The longer it waits, the longer the data stays exposed.
+- Staff accounts needed (how many, any beyond the owner): _unknown_.
+- Cancellation, deposit and peak-pricing policy: _unknown_.
+
+## 10. Quick reference
+
+- Backup: `python3 scripts/backup_bookings.py` (read-only, output in git-ignored `backups/`).
 - Firestore console: https://console.firebase.google.com/project/pitchbookingsystem-6e222
-- When you finish a task, update this file if you changed the architecture, data model, or a known-issue status, and tick off the roadmap.
+- Legacy site (until cutover): https://ayebaretony.github.io/epbooking/
+- This external drive creates macOS `._*` files, which are git-excluded locally. If git reports `non-monotonic index` errors, delete any `._*` files under `.git/`.
+- When you finish a task, update this file if you changed the architecture, data model or a decision.
