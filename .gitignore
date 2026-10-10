@@ -1,0 +1,4 @@
+backups/
+*.xlsx
+._*
+.DS_Store
