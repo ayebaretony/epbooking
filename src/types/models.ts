@@ -46,11 +46,12 @@ export type UserProfile = {
 export type PitchStatus = "available" | "maintenance";
 
 // pitches/{pitchSlug}. `name` must match the `pitch` string on bookings exactly and is never renamed (archive instead).
-// Pitches carry no price: the hourly rate is typed on each booking.
+// defaultRatePerHour (AED) only prefills the booking form: every booking stores its own pricePerHour.
 export type Pitch = {
   id: string; // pitchSlug, e.g. "fifa-pitch"
   name: string;
-  surface: string;
+  description: string; // e.g. "11-a-side"
+  defaultRatePerHour: number;
   status: PitchStatus;
   color: string;
   sortOrder: number;

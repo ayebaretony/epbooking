@@ -141,12 +141,12 @@ Because old documents lack `status`, **filter by status in the app**, never with
 - `date` and times are the business's local time (Asia/Dubai). "Today" and "now" are computed in that timezone. Date maths happens on `YYYY-MM-DD` strings in UTC (`lib/time.ts`). Never use `toISOString()` to produce a booking date.
 - Range queries use the `date` string: `where("date", ">=", from).where("date", "<=", to).orderBy("date")`. This needs no extra index. Sort by `startTime` in the app. **Always use bounded ranges.** Never load the whole collection in the UI.
 - The pitch **name** is the stored identity (`pitch` field). `pitchSlug(name)` (e.g. `fifa-pitch`) is derived from it for slot keys and `pitches` document ids. **Pitch names must never be renamed or deleted** (archive instead), because old bookings refer to them by name.
-- Pitches have **no price**. The hourly rate is typed on each booking, as today.
+- Pitches have no fixed price. A pitch's **default hourly rate** (editable in Settings, shown in the designs) only **prefills** the booking form. Every booking stores its own `pricePerHour`, as today, because real prices vary (§3).
 
 ### New supporting collections (new documents only, nothing existing is touched)
 ```
 users/{uid}              displayName, email, role "admin"|"staff", active (bool), createdAt
-pitches/{pitchSlug}      name (exactly as in bookings), surface, status "available"|"maintenance", color, sortOrder, archived
+pitches/{pitchSlug}      name (exactly as in bookings), description (e.g. "11-a-side"), defaultRatePerHour (AED), status "available"|"maintenance", color, sortOrder, archived
 slots/{pitchSlug}_{date}_{HHmm}   one doc per occupied 30-minute slot: pitch, date, bookingId|null, blockId|null
 blocks/{blockId}         pitch, date, startTime, endTime, reason, createdBy   (maintenance closures)
 settings/center          centerName, currency "AED", timezone "Asia/Dubai", openTime "07:00", closeTime "23:00", slotMinutes 30
@@ -192,6 +192,29 @@ Don't print, log or copy the old credentials anywhere.
 
 **Getting there fast:** the data stays exposed until step 4, and there is no copy step to wait for. So build **Phase 1 (sign-in and rules) and Phase 3 (bookings)** first and cut over as soon as those work, then add the calendar, dashboard and reports. The owner decides when.
 
+## Designs and what they need from the data
+
+The owner's designs are the PNG screens in `assets/` (reviewed 2026-10-11): `auth`, `home` (Today), `calender`, `Bookings`, `add new booking`, `Booking details`, `dashboard`, `reports`, `settings`. Each shows a mobile and a desktop layout (bottom tab bar on mobile, left sidebar on desktop). **Their sample data (Alex Morgan, Test Client A, 2024 dates, AED 184,250 and so on) is placeholder. Never hard-code or copy it. All numbers come from Firestore.** The `settings` screen also shows a style guide, which is a reference for us, not a feature to build.
+
+**Design tokens** (from the style guide in `settings.png`; define once as Tailwind theme tokens): deep green `#186534` (primary), slate `#334155`, success `#15803D`, warning `#B45309`, danger `#B91C1C`. Type scale: display 28px, heading 20px, body 16px, caption 12px. 8px spacing grid. Pale green page background, white cards with a thin border and rounded corners. Pitch colours in the designs: Fifa Pitch green, Airdome blue, Junior Football Pitch amber, Half Pitch purple (stored in `pitches.color`).
+
+**Where the designs and the real data disagree, or need something we don't store.** Handle these as listed, and ask the owner before inventing anything beyond them:
+- **Schedule window:** the designs show 16:00 to 22:00. **96 of the 482 bookings start before 16:00** (mornings from 07:00), so the Today and Calendar views must cover the full opening hours (07:00 to 23:00, from `settings/center`). They can scroll or default to a busy window, but must never hide a booking.
+- **Booking number (`#PS-1042`):** bookings have no number, only a random document id. Show a short id derived from the document id (e.g. the first 6 characters) until the owner decides otherwise. Don't add a counter.
+- **Booking type (One-off or recurring):** shown from `seriesId`. Older recurring bookings have none, so they show as "One-off".
+- **Created by and Created date:** missing on all existing bookings (they predate sign-in). Show "Not recorded" for those, never a guess.
+- **Activity timeline and "Recent activity" (payment received, new booking request):** **not in the data.** There are no payments, no activity log and no booking requests. Do **not** build or fake them in the first version. "Recent activity" may list recently created or cancelled bookings (from `createdAt` and `status`) once those exist. Payments are an open decision (§9).
+- **Call and WhatsApp buttons:** contacts are phone numbers in mixed formats (about 390 local `05xxxxxxxx`, about 77 `+971...` in different layouts, 8 empty, a few odd ones). Build a **display-only** normaliser (`05xxxxxxxx` becomes `+9715xxxxxxxx`) used just for the `tel:` and `wa.me` links. Hide the buttons when the number can't be normalised. **Never rewrite the stored `contact`.**
+- **Repeat clients:** group by the **trimmed, lower-cased** client name (exact strings give 44 clients but only 39 once stray spaces are ignored). Do not change the stored names.
+- **Status:** the designs show Confirmed and Cancelled. Cancelling sets `status: "cancelled"` and frees the slots (the design says the booking "remains in your records"). Only an admin can delete permanently, so hide the delete action for staff.
+- **Contact field label:** the design says "phone or email". It is still the single `contact` field.
+- **Default pitch prices** in Settings (750, 400, 500, 250 in the design) are placeholders. The owner enters the real defaults. The form still lets each booking use its own rate.
+- **Preferences:** dark mode and default booking duration are per-user conveniences, so store them on the device (localStorage) or the user's own `users` document, never in `settings/center` (admin-only). Currency is fixed to AED (shown disabled).
+- **Staff accounts:** the sign-in design has no sign-up or Google button, and Settings has no user management. For the first version the owner creates each staff member's Auth account in the Firebase console plus a `users/{uid}` document, with step-by-step instructions from us. A "Team" screen is an open decision (§9).
+- **Reports:** the PDF and Excel exports need libraries the legacy app used (jsPDF, jspdf-autotable, SheetJS `xlsx`). **They are not in the approved stack. Ask the owner before adding them** (and prefer a maintained SheetJS build over the old npm `xlsx@0.18.5`, which has known vulnerabilities). Do this in Phase 6, not before.
+
+**Screen to phase:** auth and shell go in Phase 1, Settings (pitches and profile) in Phase 2, Bookings, Add booking and Booking details in Phase 3, Today in Phase 3 (it needs only today's bookings) or early Phase 4, Calendar in Phase 4, Dashboard in Phase 5, Reports in Phase 6.
+
 ## 8. Build phases
 
 - **Phase 0, Setup (done):** scaffold, emulators, typed models, money, slot and date helpers with tests. Colour tokens and UI primitives wait for the owner's designs.
@@ -216,7 +239,10 @@ Defaults are in italics and should sit behind settings so they're easy to change
 - Do `Half Pitch` and `Fifa Pitch` (or any other pair) physically share space and need to block each other? *No: conflicts are per pitch only, matching current data.*
 - Opening hours: *07:00 to 23:00*. Are bookings past midnight allowed? *No.*
 - What counts as revenue? *Confirmed bookings only (a missing status counts as confirmed). Pending shown separately, cancelled excluded.*
-- Payments and deposits tracking, a separate clients collection, customer email: *not in the first version* (customer details stay on each booking, as today).
+- Payments and deposits tracking (the designs hint at "Payment received"), an activity log, booking requests, a separate clients collection, customer email: *not in the first version* (customer details stay on each booking, as today). Owner to say if payments should come next.
+- Booking numbers like `#PS-1042`: *short document id for now.*
+- A "Team" screen to add and approve staff: *no, the owner creates accounts in the Firebase console for now.*
+- Reports libraries (jsPDF, jspdf-autotable, SheetJS): _needs the owner's approval before Phase 6._
 - When to cut over: *after Phase 3.*
 - Staff accounts needed (how many, any beyond the owner): _unknown_.
 - Cancellation, deposit and peak-pricing policy: _unknown_.
