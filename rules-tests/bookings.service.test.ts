@@ -8,7 +8,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs } from "firebase/firestore"
 import { planSlotBackfill } from "../src/lib/backfill.ts";
 import { conflictingDates } from "../src/lib/availability.ts";
 import {
-  SlotConflictError, bookingSlotKeys, cancelBooking, createBooking, createSeries, deleteBooking, fetchTakenSlots, getBooking, listBookingsForYear, updateBooking,
+  SlotConflictError, bookingSlotKeys, cancelBooking, createBooking, createSeries, deleteBooking, fetchTakenSlots, getBooking, listBookingsForYear, listBookingsInRange, subscribeToDay, updateBooking,
   type NewBooking,
 } from "../src/features/bookings/bookings.service.ts";
 import { assertFails, clearFirestore, closeApps, legacyBooking, principal, seed, seedPeople, type Plain, type Principal } from "./helpers.ts";
@@ -178,6 +178,45 @@ describe("booking service (with the real rules)", () => {
     const year = await listBookingsForYear(staff.db, 2026);
     assert.deepEqual(year.map((b) => b.id), ["b", "c"]);
     assert.ok(!("status" in year[0]) && !("createdBy" in year[0]));
+  });
+
+  test("a date range returns exactly the bookings between the two dates, both days included", async () => {
+    await seed([
+      { path: "bookings/a", data: legacyBooking({ date: "2026-10-11" }) },
+      { path: "bookings/b", data: legacyBooking({ date: "2026-10-12" }) },
+      { path: "bookings/c", data: legacyBooking({ date: "2026-10-18" }) },
+      { path: "bookings/d", data: legacyBooking({ date: "2026-10-19" }) },
+    ]);
+    assert.deepEqual((await listBookingsInRange(staff.db, "2026-10-12", "2026-10-18")).map((x) => x.id), ["b", "c"]);
+    assert.deepEqual((await listBookingsInRange(staff.db, "2026-10-12", "2026-10-12")).map((x) => x.id), ["b"]);
+  });
+
+  test("the live feed for one day sends the day's bookings now and every change after, until stopped", async () => {
+    await seed([
+      { path: "bookings/today1", data: legacyBooking({ date: "2026-11-05" }) },
+      { path: "bookings/other", data: legacyBooking({ date: "2026-11-06" }) },
+    ]);
+    const updates: string[][] = [];
+    const waitFor = async (check: () => boolean) => {
+      for (let i = 0; i < 100 && !check(); i++) await new Promise((resolve) => setTimeout(resolve, 50));
+      assert.ok(check(), "the feed did not deliver the expected update in time");
+    };
+    const stop = subscribeToDay(staff.db, "2026-11-05", (bookings) => updates.push(bookings.map((x) => x.id).sort()), (error) => assert.fail(error.message));
+    await waitFor(() => updates.length >= 1);
+    assert.deepEqual(updates.at(-1), ["today1"]); // only that day, not the booking on 6 Nov
+
+    const id = await createBooking(staff.db, author(), input({ date: "2026-11-05", startTime: "10:00", endTime: "11:00" }));
+    await waitFor(() => updates.at(-1)?.length === 2);
+    assert.ok(updates.at(-1)!.includes(id)); // a new booking appears without reloading
+
+    await cancelBooking(staff.db, (await getBooking(staff.db, id))!);
+    await waitFor(() => updates.some((u) => u.length === 2) && updates.length >= 3); // the cancellation arrives too
+
+    stop();
+    const seen = updates.length;
+    await createBooking(staff.db, author(), input({ date: "2026-11-05", startTime: "14:00", endTime: "15:00" }));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    assert.equal(updates.length, seen); // nothing more arrives after stopping
   });
 
   // Needs a private backup, so it only runs when BACKUP_FILE points at one.

@@ -2,8 +2,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { BookingDetailsPage } from "@/features/bookings/BookingDetailsPage";
 import { BookingsPage } from "@/features/bookings/BookingsPage";
+import { CalendarPage } from "@/features/calendar/CalendarPage";
 import { PublicOnly, RequireAuth } from "@/features/auth/RouteGuards";
 import { SettingsPage } from "@/features/settings/SettingsPage";
+import { TodayPage } from "@/features/today/TodayPage";
 import { AppShell } from "./AppShell";
 import { PlaceholderPage } from "./PlaceholderPage";
 
@@ -16,8 +18,8 @@ export function App() {
 
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
-          <Route index element={<PlaceholderPage title="Today" phase="Phase 3" />} />
-          <Route path="calendar" element={<PlaceholderPage title="Calendar" phase="Phase 4" />} />
+          <Route index element={<TodayPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
           <Route path="bookings" element={<BookingsPage />} />
           <Route path="bookings/:id" element={<BookingDetailsPage />} />
           <Route path="dashboard" element={<PlaceholderPage title="Dashboard" phase="Phase 5" />} />

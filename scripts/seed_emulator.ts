@@ -4,12 +4,16 @@
 //   npm run emulators                                   (in another terminal)
 //   node scripts/seed_emulator.ts --backup /path/to/bookings-….json
 //   add --reset to wipe the emulator's data first
+//   add --demo-today to also add a few FAKE bookings dated today, so the Today screen has something to show
 //
 // The backup is the simplified .json made by scripts/backup_bookings.py (not the .raw.json). It contains client personal
 // data, so it stays out of git (backups/ is git-ignored).
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import type { BackfillBooking } from "../src/lib/backfill.ts";
+import { pitchSlug, slotKeysFor } from "../src/lib/conflicts.ts";
+import { timeToMinutes } from "../src/lib/bookingMath.ts";
+import { todayInTimezone } from "../src/lib/time.ts";
 import { EMULATOR, clearEmulator, createOnly, listCollection, type Plain } from "./lib/firestoreRest.ts";
 import { runBackfill } from "./lib/backfillRunner.ts";
 
@@ -34,6 +38,31 @@ try {
 
   const bookings: BackfillBooking[] = rows.map((row) => ({ id: row.id, pitch: String(row.pitch), date: String(row.date), startTime: String(row.startTime), endTime: String(row.endTime) }));
   const report = await runBackfill(EMULATOR, bookings, true);
+
+  if (args.includes("--demo-today")) {
+    const today = todayInTimezone("Asia/Dubai");
+    const demo = [
+      ["Fifa Pitch", "Demo Client A", "17:00", "19:00", 750],
+      ["Fifa Pitch", "Demo Client B", "21:00", "22:30", 600],
+      ["Airdome", "Demo Client C", "20:30", "21:30", 400],
+      ["Junior Football Pitch", "Demo Client D", "18:00", "19:30", 440],
+      ["Half Pitch", "Demo Client E", "07:00", "08:00", 500],
+    ] as const;
+    const taken = new Set((await listCollection(EMULATOR, "slots")).map((doc) => doc.id));
+    const bookingsToAdd = [];
+    const slotsToAdd = [];
+    for (const [index, [pitch, clientName, startTime, endTime, price]] of demo.entries()) {
+      const keys = slotKeysFor(pitchSlug(pitch), today, timeToMinutes(startTime)!, timeToMinutes(endTime)!, 30);
+      if (keys.some((key) => taken.has(key))) continue; // never overlap a real booking
+      const id = `demo-today-${index}`;
+      const hours = (timeToMinutes(endTime)! - timeToMinutes(startTime)!) / 60;
+      bookingsToAdd.push({ id, data: { pitch, clientName, contact: "0500000000", date: today, startTime, endTime, pricePerHour: price, hours, totalPayment: hours * price } });
+      for (const key of keys) slotsToAdd.push({ id: key, data: { pitch, date: today, bookingId: id } });
+    }
+    await createOnly(EMULATOR, "bookings", bookingsToAdd.filter((b) => !existing.has(b.id)));
+    await createOnly(EMULATOR, "slots", slotsToAdd.filter((slot) => !taken.has(slot.id)));
+    console.log(`Demo: added ${bookingsToAdd.length} fake bookings dated ${today}.`);
+  }
 
   // Fake sign-in accounts, only inside the emulator
   for (const extra of [[], ["--role", "staff"]]) execFileSync("node", ["scripts/seed_emulator_user.mjs", ...extra], { stdio: "inherit" });

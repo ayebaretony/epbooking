@@ -10,7 +10,7 @@
 // EXISTING DATA (AGENTS.md section 2): an old booking is only written when a person edits, cancels or deletes THAT booking.
 // Editing leaves hours and totalPayment exactly as stored unless the times or the price were changed.
 import {
-  collection, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, serverTimestamp, where,
+  collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, where,
   type DocumentReference, type Firestore,
 } from "firebase/firestore";
 import { SLOT_MINUTES, priceBooking, timeToMinutes } from "../../lib/bookingMath.ts";
@@ -43,10 +43,26 @@ const isCancelled = (booking: Pick<Booking, "status">) => booking.status === "ca
 
 // ---------- reads ----------
 
-// One calendar year of bookings, a bounded query on the `date` text (AGENTS.md section 5)
-export async function listBookingsForYear(db: Firestore, year: number): Promise<Booking[]> {
-  const snapshot = await getDocs(query(collection(db, "bookings"), where("date", ">=", `${year}-01-01`), where("date", "<=", `${year}-12-31`), orderBy("date")));
+// Bookings between two dates (both included), a bounded query on the `date` text (AGENTS.md section 5). Every list and
+// calendar view is built from this, so reads stay small.
+export async function listBookingsInRange(db: Firestore, from: string, to: string): Promise<Booking[]> {
+  const snapshot = await getDocs(query(collection(db, "bookings"), where("date", ">=", from), where("date", "<=", to), orderBy("date")));
   return snapshot.docs.map((entry) => mapBooking(entry.id, entry.data()));
+}
+
+// One calendar year of bookings
+export function listBookingsForYear(db: Firestore, year: number): Promise<Booking[]> {
+  return listBookingsInRange(db, `${year}-01-01`, `${year}-12-31`);
+}
+
+// A live feed of one day's bookings (for the Today screen). Calls `onChange` straight away and again whenever any booking
+// that day is created, edited, cancelled or deleted, by anyone. Returns the function that stops listening.
+export function subscribeToDay(db: Firestore, date: string, onChange: (bookings: Booking[]) => void, onError: (error: Error) => void): () => void {
+  return onSnapshot(
+    query(collection(db, "bookings"), where("date", "==", date)),
+    (snapshot) => onChange(snapshot.docs.map((entry) => mapBooking(entry.id, entry.data()))),
+    onError,
+  );
 }
 
 // The first and last year that have bookings, for the Year filter

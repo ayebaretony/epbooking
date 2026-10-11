@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { addDays, addMonths, minutesOfDay, parseHHmm, todayInTimezone, zonedDateTime } from "./time.ts";
+import { addDays, addMonths, dayOfWeekMonday, minutesOfDay, monthEnd, monthGridDates, monthStart, parseHHmm, todayInTimezone, weekDates, weekStartMonday, zonedDateTime } from "./time.ts";
 
 const DUBAI = "Asia/Dubai"; // UTC+4, no daylight saving
 
@@ -33,4 +33,25 @@ test("addMonths clamps to month end and never drifts when counted from the origi
   assert.equal(addMonths("2026-01-31", 2), "2026-03-31"); // legacy app drifted to Mar 3 / Mar 6 here
   assert.equal(addMonths("2028-01-31", 1), "2028-02-29"); // leap year
   assert.equal(addMonths("2026-11-15", 3), "2027-02-15");
+});
+
+test("weeks run Monday to Sunday", () => {
+  assert.equal(dayOfWeekMonday("2026-10-12"), 0); // a Monday
+  assert.equal(dayOfWeekMonday("2026-10-18"), 6); // a Sunday
+  assert.equal(weekStartMonday("2026-10-14"), "2026-10-12");
+  assert.equal(weekStartMonday("2026-10-12"), "2026-10-12");
+  assert.equal(weekStartMonday("2026-10-18"), "2026-10-12");
+  assert.deepEqual(weekDates("2026-10-14"), ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"]);
+  assert.deepEqual(weekDates("2026-12-31").slice(-1), ["2027-01-03"]); // across a year end
+});
+
+test("a month grid is six Monday-first weeks that contain the whole month", () => {
+  assert.equal(monthStart("2026-10-14"), "2026-10-01");
+  assert.equal(monthEnd("2026-10-14"), "2026-10-31");
+  assert.equal(monthEnd("2028-02-10"), "2028-02-29");
+  const grid = monthGridDates("2026-10-14");
+  assert.equal(grid.length, 42);
+  assert.equal(grid[0], "2026-09-28"); // 1 Oct 2026 is a Thursday, so the grid starts on the Monday before
+  assert.ok(grid.includes("2026-10-01") && grid.includes("2026-10-31"));
+  assert.equal(dayOfWeekMonday(grid[0]), 0);
 });

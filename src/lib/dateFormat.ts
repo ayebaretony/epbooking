@@ -27,3 +27,32 @@ export function formatLongDate(date: string): string {
 export function formatMoment(moment: Date, timezone: string): string {
   return formatInTimeZone(moment, timezone, "d MMM yyyy");
 }
+
+// "Mon"
+export function formatWeekdayShort(date: string): string {
+  return format(localDate(date), "EEE");
+}
+
+// "October 2026"
+export function formatMonthYear(date: string): string {
+  return format(localDate(date), "MMMM yyyy");
+}
+
+// "11 October" (no year, for headings that already say it)
+export function formatDayMonth(date: string): string {
+  return format(localDate(date), "d MMMM");
+}
+
+// The day of the month as a number
+export function dayOfMonth(date: string): number {
+  return Number(date.slice(8, 10));
+}
+
+// "12 – 18 Oct 2026", "28 Sep – 4 Oct 2026", "28 Dec 2026 – 3 Jan 2027"
+export function formatWeekRange(first: string, last: string): string {
+  const start = localDate(first);
+  const end = localDate(last);
+  if (start.getFullYear() !== end.getFullYear()) return `${format(start, "d MMM yyyy")} – ${format(end, "d MMM yyyy")}`;
+  if (start.getMonth() !== end.getMonth()) return `${format(start, "d MMM")} – ${format(end, "d MMM yyyy")}`;
+  return `${format(start, "d")} – ${format(end, "d MMM yyyy")}`;
+}

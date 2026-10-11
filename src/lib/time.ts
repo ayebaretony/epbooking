@@ -53,3 +53,35 @@ export function addMonths(date: string, months: number): string {
   const lastDay = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
   return toDateString(first.getUTCFullYear(), first.getUTCMonth() + 1, Math.min(day, lastDay));
 }
+
+// 0 = Monday ... 6 = Sunday. The calendar's weeks run Monday to Sunday, as in the design.
+export function dayOfWeekMonday(date: string): number {
+  const { year, month, day } = parseDateString(date);
+  return (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+}
+
+export function weekStartMonday(date: string): string {
+  return addDays(date, -dayOfWeekMonday(date));
+}
+
+// The seven dates of the week containing `date`, Monday first
+export function weekDates(date: string): string[] {
+  const start = weekStartMonday(date);
+  return Array.from({ length: 7 }, (_, index) => addDays(start, index));
+}
+
+export function monthStart(date: string): string {
+  const { year, month } = parseDateString(date);
+  return toDateString(year, month, 1);
+}
+
+export function monthEnd(date: string): string {
+  const { year, month } = parseDateString(date);
+  return toDateString(year, month, new Date(Date.UTC(year, month, 0)).getUTCDate());
+}
+
+// Six full weeks (42 dates), Monday first, that cover the month containing `date`
+export function monthGridDates(date: string): string[] {
+  const start = weekStartMonday(monthStart(date));
+  return Array.from({ length: 42 }, (_, index) => addDays(start, index));
+}

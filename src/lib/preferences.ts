@@ -28,3 +28,12 @@ export function formatDurationOption(minutes: number): string {
   const hours = minutes / 60;
   return `${hours} ${hours === 1 ? "hour" : "hours"}`;
 }
+
+// The browser's localStorage, or null where it is blocked (private windows) so callers fall back to the defaults
+export function browserStorage(): Storage | null {
+  try {
+    return (globalThis as { localStorage?: Storage }).localStorage ?? null;
+  } catch {
+    return null;
+  }
+}

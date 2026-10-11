@@ -12,7 +12,7 @@ import { durationMinutes, formatHours, minutesToTime, priceBooking, timeToMinute
 import { formatDateWithDay } from "@/lib/dateFormat";
 import { db } from "@/lib/firebase";
 import { aedToFils, formatMoney, parseMajorToMinor } from "@/lib/money";
-import { readDefaultDuration } from "@/lib/preferences";
+import { browserStorage, readDefaultDuration } from "@/lib/preferences";
 import { MAX_OCCURRENCES, MIN_OCCURRENCES, occurrenceDates, type RecurrenceType } from "@/lib/recurrence";
 import { todayInTimezone } from "@/lib/time";
 import { DEFAULT_CENTER_SETTINGS } from "@/types/models";
@@ -34,14 +34,6 @@ type Props = {
 const SETTINGS = DEFAULT_CENTER_SETTINGS;
 const OPEN_MINUTES = timeToMinutes(SETTINGS.openTime) ?? 420;
 const CLOSE_MINUTES = timeToMinutes(SETTINGS.closeTime) ?? 1380;
-
-function browserStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
 
 export function BookingFormDrawer({ booking, prefill, onClose, onSaved }: Props) {
   const editing = booking !== null;

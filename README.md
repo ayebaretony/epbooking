@@ -21,7 +21,7 @@ The old single-file app lives in `legacy/` (the live site is still served from `
 1. `cp .env.example .env.local`
 2. The Firestore emulator needs **Java** (JDK 17 or newer). Check with `java -version`. Install with `brew install --cask temurin` if it is missing.
 3. `npm run emulators` in one terminal, `npm run dev` in another. (If port 5173 is busy, Vite picks the next free one and prints it.)
-4. Fill the practice emulator with your real bookings (from a backup made by `scripts/backup_bookings.py`), the pitches, the slot documents and two fake test users: `node scripts/seed_emulator.ts --backup /path/to/bookings-….json --reset`. (The backup holds client personal data, so keep it out of git.)
+4. Fill the practice emulator with your real bookings (from a backup made by `scripts/backup_bookings.py`), the pitches, the slot documents and two fake test users: `node scripts/seed_emulator.ts --backup /path/to/bookings-….json --reset` (add `--demo-today` to also get a few fake bookings dated today, so the Today screen has something to show). (The backup holds client personal data, so keep it out of git.)
    Or just create a fake test person in the emulator, then sign in at the printed address:
    - `node scripts/seed_emulator_user.mjs` makes an approved admin, `--role staff` a staff member, and `--inactive` someone who has signed up but is not approved yet (to see the waiting screen). The values only exist inside the emulator.
 

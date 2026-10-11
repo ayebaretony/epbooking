@@ -3,16 +3,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { signOut } from "@/features/auth/auth.service";
-import { DURATION_OPTIONS, formatDurationOption, readDefaultDuration, saveDefaultDuration } from "@/lib/preferences";
+import { DURATION_OPTIONS, browserStorage, formatDurationOption, readDefaultDuration, saveDefaultDuration } from "@/lib/preferences";
 import { DEFAULT_CENTER_SETTINGS } from "@/types/models";
-
-function browserStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
 
 export function PreferencesCard() {
   // Kept on this device only. It will pre-select the length when a booking is created.
