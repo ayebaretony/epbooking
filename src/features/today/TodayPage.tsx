@@ -48,7 +48,7 @@ export function TodayPage() {
     return (
       <div>
         {header}
-        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4" role="status" aria-label="Loading today">
+        <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4" role="status" aria-label="Loading today">
           {[0, 1, 2, 3].map((card) => (
             <Skeleton key={card} className="h-28" />
           ))}
@@ -90,7 +90,7 @@ export function TodayPage() {
     <div>
       {header}
 
-      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard label="Bookings today" value={String(stats.bookings)} hint="Scheduled bookings" icon={<CalendarCheck className="size-3.5" />} />
         <StatCard label="Hours booked" value={`${formatHours(stats.hours)}h`} hint="Across all pitches" icon={<Clock className="size-3.5" />} />
         <StatCard label="Revenue today" value={formatAed(stats.revenue, currency)} hint="Today's total" icon={<TrendingUp className="size-3.5" />} />

@@ -61,3 +61,16 @@ export function filsToAed(fils: number): number {
 export function formatAed(aed: number, currency: string): string {
   return formatMoney(aedToFils(aed), currency);
 }
+
+// Change from `previous` to `current` as a ratio (0.12 = +12%). null when there is nothing to compare with.
+export function changeRatio(current: number, previous: number): number | null {
+  if (previous <= 0) return null;
+  return (current - previous) / previous;
+}
+
+const percentFormatter = new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 1, signDisplay: "exceptZero" });
+
+// 0.124 -> "+12.4%", -0.03 -> "-3%", 0 -> "0%"
+export function formatPercentChange(ratio: number): string {
+  return percentFormatter.format(ratio);
+}

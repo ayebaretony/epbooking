@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aedToFils, calcTotalMinor, filsToAed, formatAed, formatMoney, formatRate, minorToMajorInput, parseMajorToMinor } from "./money.ts";
+import { aedToFils, calcTotalMinor, changeRatio, filsToAed, formatAed, formatMoney, formatPercentChange, formatRate, minorToMajorInput, parseMajorToMinor } from "./money.ts";
 
 // Intl puts a non-breaking space after "AED"; compare with a normal one.
 const plain = (text: string) => text.replace(/\u00a0/g, " ");
@@ -55,4 +55,14 @@ test("stored AED amounts are shown through formatAed", () => {
   assert.equal(plain(formatAed(1500, "AED")), "AED 1,500");
   assert.equal(plain(formatAed(790.65, "AED")), "AED 790.65");
   assert.equal(plain(formatAed(0, "AED")), "AED 0");
+});
+
+test("month-on-month change is a ratio, and 'nothing to compare with' is null", () => {
+  assert.equal(changeRatio(112, 100), 0.12);
+  assert.equal(changeRatio(50, 100), -0.5);
+  assert.equal(changeRatio(100, 0), null);
+  assert.equal(changeRatio(0, 0), null);
+  assert.equal(formatPercentChange(0.124), "+12.4%");
+  assert.equal(formatPercentChange(-0.03), "-3%");
+  assert.equal(formatPercentChange(0), "0%");
 });

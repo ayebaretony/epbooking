@@ -12,6 +12,7 @@ import { usePitches } from "@/features/pitches/usePitches";
 import { formatHours } from "@/lib/bookingMath";
 import { formatDate } from "@/lib/dateFormat";
 import { formatAed } from "@/lib/money";
+import { MONTH_NAMES } from "@/lib/months";
 import { todayInTimezone } from "@/lib/time";
 import { DEFAULT_CENTER_SETTINGS } from "@/types/models";
 import type { Booking, Pitch } from "@/types/models";
@@ -23,7 +24,6 @@ import { useBookingsForYear } from "./hooks/useBookingsForYear";
 import { useBookingYears } from "./hooks/useBookingYears";
 
 const PAGE_SIZE = 10;
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const CURRENCY = DEFAULT_CENTER_SETTINGS.currency;
 const selectClass = "h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink focus:border-primary";
 
@@ -94,7 +94,7 @@ export function BookingsPage() {
           </select>
           <select aria-label="Month" value={filters.month} onChange={(event) => change({ month: event.target.value })} className={selectClass}>
             <option value="">All months</option>
-            {MONTHS.map((month, index) => (
+            {MONTH_NAMES.map((month, index) => (
               <option key={month} value={index}>
                 {month}
               </option>
