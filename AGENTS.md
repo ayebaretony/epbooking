@@ -10,9 +10,9 @@ An internal management portal for **Palace Sports** (football pitch rental, pric
 
 The owner's decision (2026-10-11): **keep using the existing booking documents in Firestore, exactly where they are, and build the new system on top of them.** There is no copy and no migration to a new shape. New bookings are simply added to the same collection, in the same format. The owner does not mind the old site going offline once the new one replaces it.
 
-| | Legacy app (live until cutover) | New React app (being built) |
+| | Old app (retired 2026-10-11) | New React app (**LIVE** since 2026-10-11) |
 |---|---|---|
-| Where | https://ayebaretony.github.io/epbooking/ (`index.html` + `firebase-config.js` on `main`, archived in `legacy/` on the rebuild branch) | `~/Desktop/epbooking-react`, branch `react-rebuild` of this repo |
+| Where | Its address https://ayebaretony.github.io/epbooking/ now shows a notice (`docs/index.html`) that redirects to the new site. The old code is archived in `legacy/` | **https://pitchbookingsystem-6e222.web.app**. Source: this repo's `main` branch, working copy at `~/Desktop/epbooking-react` |
 | Stack | One HTML file, Firebase compat SDK from CDNs | React + TypeScript + Vite (see §4) |
 | Data | Firestore collection `bookings` | **The same `bookings` collection, same documents.** Plus a few new supporting collections (§5) |
 | Auth | Fake (hard-coded in the page) | Real Firebase Authentication |
@@ -79,8 +79,8 @@ This is a snapshot. Re-run the backup script before relying on it.
 
 ### Location and branching
 - **The project lives on the owner's internal disk** at `~/Desktop/epbooking-react` (agreed 2026-10-10), because installs on the external exFAT drive are slow and macOS leaves `._*` files. The external drive (`/Volumes/Tony/footballbooking`) is a second clone used for backups and the legacy files. Work in the internal-disk clone.
-- It is a git clone of this repo on a `react-rebuild` branch. `main` keeps serving the legacy site until cutover (§7).
-- The legacy `index.html` and `firebase-config.js` were moved to `legacy/` on this branch so Vite can have its own root `index.html`. The live site is unaffected because it is served from `main`. The hard-coded login in `legacy/index.html` was redacted on this branch.
+- It is a git clone of this repo. **Work on a short-lived branch from `main` and open a pull request** (the `react-rebuild` branch was merged into `main` on 2026-10-11 and is no longer needed). `main` holds the real project. GitHub Pages serves only `docs/` (see §1).
+- The old `index.html` and `firebase-config.js` are archived in `legacy/` so Vite can have its own root `index.html`. The hard-coded login in `legacy/index.html` was redacted.
 - **Phase 0 status (2026-10-10):** scaffold, config, emulator wiring, typed models and the pure logic helpers (`src/lib/money.ts`, `conflicts.ts`, `time.ts`) are in place, with `npm test`, `npm run build` and `npm run lint` passing. Colour tokens and UI primitives are **waiting for the owner's designs**.
 - **There is deliberately no `.firebaserc`:** every deploy command names the project explicitly (`npm run deploy:hosting`, `npm run deploy:rules`). `firestore.rules` is the real rules file and is **live** since the cutover (§7), so changing it changes who can read the owner's bookings.
 - Unit tests use Node's built-in runner (`npm test`, no extra dependency). Keep the logic in `src/lib` pure so it stays testable this way.
