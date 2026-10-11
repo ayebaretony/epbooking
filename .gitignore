@@ -1,0 +1,27 @@
+backups/
+*.xlsx
+._*
+.DS_Store
+
+# dependencies
+node_modules/
+
+# local env files
+.env
+.env.local
+.env*.local
+
+# build output
+dist/
+
+# Firebase local state and logs
+.firebase/
+firebase-debug.log*
+firestore-debug.log
+ui-debug.log
+
+# typescript
+*.tsbuildinfo
+
+# local Claude Code settings
+.claude/

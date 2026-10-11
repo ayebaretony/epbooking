@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// ROLLBACK ONLY. These are the rules the database had before the cutover: they let ANYONE on the internet read, change and
+// delete everything. Deploying this file reopens the database to the public and is only for getting the old site working
+// again in an emergency. Put the proper rules (../firestore.rules) back as soon as possible.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write;
+    }
+  }
+}

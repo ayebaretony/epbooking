@@ -1,0 +1,175 @@
+rules_version = '2';
+
+// Palace Sports security rules (AGENTS.md sections 5 to 7). Anything not allowed below is denied.
+//
+// These rules are LIVE on pitchbookingsystem-6e222 (deployed at the cutover, 2026-10-11). Changing them changes who can read
+// the owner's real bookings, so: edit here, run `npm run test:rules` (with BACKUP_FILE set, see the README) and only deploy
+// with the owner's go-ahead (`npm run deploy:rules`). The old wide-open rules are kept for emergencies in
+// rollback/firestore.rules.legacy-open and must never be deployed otherwise.
+//
+// The `bookings` collection already holds a year of real documents. These rules accept every existing document
+// exactly as it is (the nine original fields, no extra fields), and only allow the optional additive fields
+// listed in validBooking() on top.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Who is asking? ----------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Signed in AND approved: has a users/{uid} document that is active with a valid role.
+    // Signing up alone grants nothing: the owner creates the users/{uid} document by hand in the console.
+    function isActive() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().active == true
+        && userDoc().role in ['admin', 'staff'];
+    }
+
+    function isAdmin() {
+      return isActive() && userDoc().role == 'admin';
+    }
+
+    // ---------- users ----------
+
+    match /users/{uid} {
+      // You can read your own profile (needed for the "waiting for approval" screen); admins can read everyone's.
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+
+      // No client-side create or delete: the owner creates and removes users in the Firebase console.
+      allow create, delete: if false;
+
+      // Anyone approved can change only their own display name (Settings > Edit profile).
+      // role and active stay out of reach, so nobody can promote themselves.
+      allow update: if isActive()
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 100;
+
+      // An admin can approve or suspend STAFF (never themselves, never another admin). Only `active` can change.
+      allow update: if isAdmin()
+        && request.auth.uid != uid
+        && resource.data.role == 'staff'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active'])
+        && request.resource.data.active is bool;
+    }
+
+    // ---------- pitches ----------
+
+    // `name` must match the `pitch` string stored on bookings, so it can never be renamed (archive instead).
+    function validPitch(p) {
+      return p.keys().hasOnly(['name', 'description', 'defaultRatePerHour', 'color', 'sortOrder', 'archived'])
+        && p.keys().hasAll(['name', 'description', 'color', 'sortOrder', 'archived'])
+        && p.name is string && p.name.size() > 0 && p.name.size() <= 60
+        && p.description is string && p.description.size() <= 100
+        // Optional: pitches have no fixed price (each client's rate is negotiated), so most have none.
+        && (!('defaultRatePerHour' in p) || (p.defaultRatePerHour is number && p.defaultRatePerHour >= 0))
+        && p.color is string && p.color.size() <= 30
+        && p.sortOrder is number
+        && p.archived is bool;
+    }
+
+    match /pitches/{pitchId} {
+      allow read: if isActive();
+      allow create: if isAdmin() && validPitch(request.resource.data);
+      allow update: if isAdmin()
+        && validPitch(request.resource.data)
+        && request.resource.data.name == resource.data.name;
+      allow delete: if false;
+    }
+
+    // ---------- bookings (the existing collection) ----------
+
+    // The nine original fields are required, so every existing document is valid as it is.
+    // The optional additive fields are absent on old documents: status, notes, createdBy, createdByName, createdAt, updatedAt, seriesId.
+    // Times are zero-padded "HH:mm", so comparing them as text compares them as times.
+    function validBooking(b) {
+      return b.keys().hasOnly([
+          'pitch', 'clientName', 'contact', 'date', 'startTime', 'endTime', 'pricePerHour', 'hours', 'totalPayment',
+          'status', 'notes', 'createdBy', 'createdByName', 'createdAt', 'updatedAt', 'seriesId'
+        ])
+        && b.keys().hasAll([
+          'pitch', 'clientName', 'contact', 'date', 'startTime', 'endTime', 'pricePerHour', 'hours', 'totalPayment'
+        ])
+        && b.pitch is string && b.pitch.size() > 0 && b.pitch.size() <= 60
+        && b.clientName is string && b.clientName.size() > 0 && b.clientName.size() <= 100
+        && b.contact is string && b.contact.size() <= 60
+        && b.date is string && b.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && b.startTime is string && b.startTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && b.endTime is string && b.endTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && b.endTime > b.startTime
+        && b.pricePerHour is number && b.pricePerHour >= 0
+        && b.hours is number && b.hours > 0 && b.hours <= 24
+        && b.totalPayment is number && b.totalPayment >= 0
+        // The stored total must agree with hours x rate (to the fils), as it does on every existing document.
+        && math.abs(b.totalPayment - b.hours * b.pricePerHour) < 0.01
+        && (!('status' in b) || b.status in ['confirmed', 'pending', 'cancelled'])
+        && (!('notes' in b) || (b.notes is string && b.notes.size() <= 500))
+        && (!('createdBy' in b) || b.createdBy is string)
+        && (!('createdByName' in b) || (b.createdByName is string && b.createdByName.size() <= 100))
+        && (!('createdAt' in b) || b.createdAt is timestamp)
+        && (!('updatedAt' in b) || b.updatedAt is timestamp)
+        && (!('seriesId' in b) || (b.seriesId is string && b.seriesId.size() <= 64));
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isActive();
+
+      // New bookings must record who made them and when, using the server's clock.
+      allow create: if isActive()
+        && validBooking(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Edit or cancel one booking. Who created it, and when, can never change (old bookings have neither, and
+      // can't gain them). updatedAt must be the server's clock.
+      allow update: if isActive()
+        && validBooking(request.resource.data)
+        && request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
+        && request.resource.data.get('createdByName', null) == resource.data.get('createdByName', null)
+        && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+        && request.resource.data.updatedAt == request.time;
+
+      // Staff cancel (status: "cancelled"); only an admin can delete permanently.
+      allow delete: if isAdmin();
+    }
+
+    // ---------- slots (the double-booking guard) ----------
+    // One document per occupied 30-minute slot. The id is `${pitchSlug}_${date}_${HHmm}`, so two bookings for the
+    // same pitch and time try to create the same document, and the second one is refused.
+
+    function validSlot(slotId, s) {
+      return s.keys().hasOnly(['pitch', 'date', 'bookingId'])
+        && s.keys().hasAll(['pitch', 'date', 'bookingId'])
+        && s.pitch is string && s.pitch.size() > 0
+        && s.date is string && s.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && s.bookingId is string
+        && slotId.matches('^[a-z0-9-]+_' + s.date + '_[0-9]{4}$')
+        // The booking the slot belongs to must exist once this write (or batch/transaction) completes.
+        && existsAfter(/databases/$(database)/documents/bookings/$(s.bookingId));
+    }
+
+    match /slots/{slotId} {
+      allow read: if isActive();
+      // `create` only succeeds when the document does not exist yet. There is deliberately no `update`.
+      allow create: if isActive() && validSlot(slotId, request.resource.data);
+      allow delete: if isActive();
+    }
+
+    // ---------- everything else ----------
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
