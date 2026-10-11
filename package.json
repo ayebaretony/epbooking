@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "node --test \"src/**/*.test.ts\"",
     "test:rules": "firebase emulators:exec --only auth,firestore --project demo-epbooking \"node --test --test-concurrency=1 rules-tests/*.test.ts\"",
-    "emulators": "firebase emulators:start --project demo-epbooking"
+    "emulators": "firebase emulators:start --project demo-epbooking",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting --project pitchbookingsystem-6e222",
+    "deploy:rules": "firebase deploy --only firestore:rules --project pitchbookingsystem-6e222"
   },
   "dependencies": {
     "date-fns": "^4.4.0",

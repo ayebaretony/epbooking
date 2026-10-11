@@ -1,6 +1,8 @@
 import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut as firebaseSignOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { browserStorage } from "@/lib/preferences";
+import { clearCachedProfile } from "./profileCache";
 import type { UserProfile } from "@/types/models";
 
 export async function signIn(email: string, password: string): Promise<void> {
@@ -8,6 +10,8 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (uid) clearCachedProfile(uid, browserStorage());
   await firebaseSignOut(auth);
 }
 

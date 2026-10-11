@@ -15,10 +15,15 @@ import {
 } from "firebase/firestore";
 import { SLOT_MINUTES, priceBooking, timeToMinutes } from "../../lib/bookingMath.ts";
 import { pitchSlug, slotKeysFor } from "../../lib/conflicts.ts";
+import { queryCache } from "../../lib/queryCache.ts";
 import type { TakenSlots } from "../../lib/availability.ts";
 import type { Booking } from "../../types/models.ts";
 import { mapBooking } from "./booking.mapper.ts";
 import type { BookingInput } from "./booking.validation.ts";
+
+// Everything the app remembers about bookings has a key starting with this. Any write to a booking forgets all of it, so a
+// screen can never keep showing a list from before an edit.
+export const BOOKINGS_CACHE_PREFIX = "bookings:";
 
 export class SlotConflictError extends Error {
   readonly date: string;
@@ -127,6 +132,7 @@ export async function createBooking(db: Firestore, author: Author, input: NewBoo
     });
     for (const key of keys) transaction.set(doc(db, "slots", key), { pitch: input.pitch, date: input.date, bookingId: reference.id });
   });
+  queryCache.invalidatePrefix(BOOKINGS_CACHE_PREFIX);
   return reference.id;
 }
 
@@ -189,6 +195,7 @@ export async function updateBooking(db: Firestore, existing: Booking, edit: Book
     });
     for (const key of toCreate) transaction.set(doc(db, "slots", key), { pitch: edit.pitch, date: edit.date, bookingId: existing.id });
   });
+  queryCache.invalidatePrefix(BOOKINGS_CACHE_PREFIX);
 }
 
 // Frees the booking's slots (only ones that really belong to it)
@@ -206,6 +213,7 @@ export async function cancelBooking(db: Firestore, existing: Booking): Promise<v
     transaction.update(reference, { status: "cancelled", updatedAt: serverTimestamp() });
     release();
   });
+  queryCache.invalidatePrefix(BOOKINGS_CACHE_PREFIX);
 }
 
 // Permanent. Only admins can do this (the security rules enforce it too).
@@ -216,4 +224,5 @@ export async function deleteBooking(db: Firestore, existing: Booking): Promise<v
     transaction.delete(reference);
     release();
   });
+  queryCache.invalidatePrefix(BOOKINGS_CACHE_PREFIX);
 }

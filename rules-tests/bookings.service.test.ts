@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { after, before, beforeEach, describe, test } from "node:test";
 import { collection, deleteDoc, doc, getDoc, getDocs } from "firebase/firestore";
 import { planSlotBackfill } from "../src/lib/backfill.ts";
+import { queryCache } from "../src/lib/queryCache.ts";
 import { conflictingDates } from "../src/lib/availability.ts";
 import {
   SlotConflictError, bookingSlotKeys, cancelBooking, createBooking, createSeries, deleteBooking, fetchTakenSlots, getBooking, listBookingsForYear, listBookingsInRange, subscribeToDay, updateBooking,
@@ -178,6 +179,38 @@ describe("booking service (with the real rules)", () => {
     const year = await listBookingsForYear(staff.db, 2026);
     assert.deepEqual(year.map((b) => b.id), ["b", "c"]);
     assert.ok(!("status" in year[0]) && !("createdBy" in year[0]));
+  });
+
+  test("every write clears what the app remembers about bookings, so a screen never shows a list from before an edit", async () => {
+    const remember = () => {
+      queryCache.set("bookings:2026-01-01:2026-12-31", ["old list"]);
+      queryCache.set("bookings:years", { first: 2025, last: 2026 });
+      queryCache.set("pitches", ["kept"]);
+    };
+    const forgotten = () => queryCache.get("bookings:2026-01-01:2026-12-31") === undefined && queryCache.get("bookings:years") === undefined;
+
+    remember();
+    const id = await createBooking(staff.db, author(), input());
+    assert.ok(forgotten(), "creating a booking");
+    assert.deepEqual(queryCache.get("pitches"), ["kept"]); // unrelated memory is left alone
+
+    remember();
+    const booking = (await getBooking(staff.db, id))!;
+    await updateBooking(staff.db, booking, { ...input({ clientName: "Edited" }) });
+    assert.ok(forgotten(), "editing a booking");
+
+    remember();
+    await cancelBooking(staff.db, (await getBooking(staff.db, id))!);
+    assert.ok(forgotten(), "cancelling a booking");
+
+    remember();
+    await deleteBooking(admin.db, (await getBooking(staff.db, id))!);
+    assert.ok(forgotten(), "deleting a booking");
+
+    remember();
+    await rejectsWithConflict(Promise.reject(new SlotConflictError("2026-11-01"))); // a refused booking changes nothing, so nothing to forget
+    assert.ok(!forgotten());
+    queryCache.clear();
   });
 
   test("a date range returns exactly the bookings between the two dates, both days included", async () => {

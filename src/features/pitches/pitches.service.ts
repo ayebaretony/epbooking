@@ -1,10 +1,14 @@
 import { collection, deleteField, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { pitchSlug } from "@/lib/conflicts";
+import { queryCache } from "@/lib/queryCache";
 import type { Pitch } from "@/types/models";
 import type { PitchInput } from "./pitch.validation";
 
 // Components never talk to Firestore directly: they use this file (AGENTS.md section 4).
+
+// The name the app remembers the pitch list under
+export const PITCHES_KEY = "pitches";
 
 export async function listPitches(): Promise<Pitch[]> {
   const snapshot = await getDocs(collection(db, "pitches"));
@@ -39,6 +43,7 @@ export async function createPitch(input: PitchInput, existing: readonly Pitch[])
     archived: false,
     ...(input.defaultRatePerHour === null ? {} : { defaultRatePerHour: input.defaultRatePerHour }),
   });
+  queryCache.delete(PITCHES_KEY);
 }
 
 // The name is never changed, because existing bookings refer to the pitch by name.
@@ -48,4 +53,5 @@ export async function updatePitch(id: string, input: PitchInput): Promise<void> 
     color: input.color,
     defaultRatePerHour: input.defaultRatePerHour === null ? deleteField() : input.defaultRatePerHour,
   });
+  queryCache.delete(PITCHES_KEY);
 }

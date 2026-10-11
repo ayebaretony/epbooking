@@ -25,8 +25,16 @@ The old single-file app lives in `legacy/` (the live site is still served from `
    Or just create a fake test person in the emulator, then sign in at the printed address:
    - `node scripts/seed_emulator_user.mjs` makes an approved admin, `--role staff` a staff member, and `--inactive` someone who has signed up but is not approved yet (to see the waiting screen). The values only exist inside the emulator.
 
+## Live site
+
+- The new app is live at **https://pitchbookingsystem-6e222.web.app** (Firebase Hosting, free plan), using the real project `pitchbookingsystem-6e222`. The cutover from the old site happened on 2026-10-11 (see `AGENTS.md` section 7).
+- `npm run deploy:hosting` builds and publishes the site. It needs `.env.production.local` (git-ignored, the project's public web settings, `VITE_USE_EMULATORS=false`).
+- `npm run deploy:rules` publishes `firestore.rules`. That changes who can read the real bookings, so only do it with the owner's go-ahead, after `npm run test:rules` passes against a recent backup.
+- **Emergency rollback of the rules:** copy `docs/rollback/firestore.rules.legacy-open` over `firestore.rules` and run `npm run deploy:rules`. That re-opens the database to the whole internet, so put the proper rules back straight away.
+- There is deliberately no `.firebaserc`: every command names the project explicitly, so nothing can be deployed to the wrong place by accident.
+
 ## Safety
 
-- **Never deploy this project's Firebase rules or hosting to `pitchbookingsystem-6e222` until the cutover in `AGENTS.md` section 7 is approved.** The live legacy app has no sign-in and would be locked out. For that reason there is deliberately no `.firebaserc` and no deploy script.
-- Never run scripts against production without the owner's approval, and run `python3 scripts/backup_bookings.py` first.
+- Never run scripts that write to the real project without the owner's approval, and take a backup first (`python3 scripts/backup_bookings.py`). `scripts/backfill_slots.ts` only writes with `--production --apply --confirm-production`.
+- Never write to existing `bookings` documents except when a signed-in person edits, cancels or deletes that one booking in the app.
 - Backups contain client personal data. They go in `backups/`, which is git-ignored. The repo is public.
