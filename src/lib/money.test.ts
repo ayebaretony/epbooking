@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calcTotalMinor, formatMoney, formatRate, minorToMajorInput, parseMajorToMinor } from "./money.ts";
+import { aedToFils, calcTotalMinor, filsToAed, formatMoney, formatRate, minorToMajorInput, parseMajorToMinor } from "./money.ts";
 
 // Intl puts a non-breaking space after "AED"; compare with a normal one.
 const plain = (text: string) => text.replace(/\u00a0/g, " ");
@@ -34,4 +34,19 @@ test("calcTotalMinor charges partial hours proportionally and rounds once", () =
   assert.equal(calcTotalMinor(25000, 90), 37500); // 1.5h at AED 250
   assert.equal(calcTotalMinor(52710, 90), 79065); // 1.5h at AED 527.10
   assert.equal(calcTotalMinor(10001, 30), 5001); // 5000.5 rounds up once, to whole fils
+});
+
+test("aedToFils and filsToAed convert legacy AED numbers without losing a fil", () => {
+  assert.equal(aedToFils(527.1), 52710);
+  assert.equal(aedToFils(224.07), 22407);
+  assert.equal(aedToFils(790.65), 79065);
+  for (const aed of [750, 527.1, 224.07, 400, 0.05]) {
+    assert.equal(filsToAed(aedToFils(aed)), aed); // writes back exactly what was stored
+  }
+});
+
+test("the new price rule reproduces how existing bookings were totalled", () => {
+  // 1.5 hours at AED 527.10 was stored as 790.65; 2 hours at AED 224.07 as 448.14
+  assert.equal(filsToAed(calcTotalMinor(aedToFils(527.1), 90)), 790.65);
+  assert.equal(filsToAed(calcTotalMinor(aedToFils(224.07), 120)), 448.14);
 });

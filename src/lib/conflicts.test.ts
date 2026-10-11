@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fromHHmm, overlapsTaken, slotKey, slotKeysFor, slotStarts, toHHmm } from "./conflicts.ts";
+import { fromHHmm, overlapsTaken, pitchSlug, slotKey, slotKeysFor, slotStarts, toHHmm } from "./conflicts.ts";
 
 test("toHHmm and fromHHmm convert both ways", () => {
   assert.equal(toHHmm(570), "0930");
@@ -38,4 +38,19 @@ test("overlapsTaken detects a clash with already-taken slots", () => {
   const taken = new Set([1140, 1170]); // 19:00 and 19:30 taken
   assert.equal(overlapsTaken(1080, 1140, 30, taken), false); // 18:00-19:00 ends where 19:00 starts
   assert.equal(overlapsTaken(1080, 1170, 30, taken), true);
+});
+
+test("pitchSlug turns the stored pitch names into stable ids", () => {
+  assert.equal(pitchSlug("Fifa Pitch"), "fifa-pitch");
+  assert.equal(pitchSlug("Airdome"), "airdome");
+  assert.equal(pitchSlug("Junior Football Pitch"), "junior-football-pitch");
+  assert.equal(pitchSlug("Half Pitch"), "half-pitch");
+  assert.equal(pitchSlug("  Half   Pitch "), "half-pitch");
+});
+
+test("slot keys built from stored pitch names match the documented format", () => {
+  assert.deepEqual(slotKeysFor(pitchSlug("Fifa Pitch"), "2026-10-11", 1080, 1140, 30), [
+    "fifa-pitch_2026-10-11_1800",
+    "fifa-pitch_2026-10-11_1830",
+  ]);
 });

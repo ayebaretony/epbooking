@@ -41,8 +41,18 @@ export function minorToMajorInput(minor: number): string {
   return minor % 100 === 0 ? String(minor / 100) : (minor / 100).toFixed(2);
 }
 
-// Partial hours are charged proportionally, rounded once to whole fils. Only for NEW reservations:
+// Partial hours are charged proportionally, rounded once to whole fils. Only for NEW bookings:
 // totals of existing ones are snapshots and are never recomputed.
 export function calcTotalMinor(hourlyRateMinor: number, durationMinutes: number): number {
   return Math.round((hourlyRateMinor * durationMinutes) / 60);
+}
+
+// Bookings in Firestore store AED as a number (e.g. 527.1), and that format never changes. Calculations inside the
+// app use whole fils, and these two convert at the edge: read with aedToFils, write with filsToAed.
+export function aedToFils(aed: number): number {
+  return Math.round(aed * 100);
+}
+
+export function filsToAed(fils: number): number {
+  return fils / 100;
 }

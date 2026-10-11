@@ -1,7 +1,37 @@
 import type { Timestamp } from "firebase/firestore";
 
-// Shapes of the NEW collections (AGENTS.md section 5). The legacy `bookings` collection is not modelled here:
-// it is only ever read by the migration script.
+// Shapes of the data (AGENTS.md sections 3 and 5).
+// The `bookings` collection is the EXISTING one: its nine original fields never change. Everything below
+// "optional additive fields" is missing on old documents and must be treated as its default when absent.
+
+export type BookingStatus = "confirmed" | "pending" | "cancelled";
+
+// bookings/{id}, plus the document id
+export type Booking = {
+  id: string;
+  // --- original fields, present on every existing document, formats never change ---
+  pitch: string; // "Fifa Pitch" | "Airdome" | "Junior Football Pitch" | "Half Pitch" (the name is the identity)
+  clientName: string;
+  contact: string; // phone number, may be empty
+  date: string; // "YYYY-MM-DD", business local time (Asia/Dubai). A string, not a Timestamp
+  startTime: string; // "HH:mm"
+  endTime: string; // "HH:mm"
+  pricePerHour: number; // AED, may have decimals
+  hours: number; // stored at write time
+  totalPayment: number; // AED, stored at write time. Never recomputed for existing bookings
+  // --- optional additive fields, absent on old documents ---
+  status?: BookingStatus; // missing = "confirmed"
+  notes?: string;
+  createdBy?: string; // uid
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  seriesId?: string; // recurring bookings share one
+};
+
+// What the app reads when a booking has no status
+export function bookingStatus(booking: Pick<Booking, "status">): BookingStatus {
+  return booking.status ?? "confirmed";
+}
 
 export type UserRole = "admin" | "staff";
 
@@ -15,9 +45,10 @@ export type UserProfile = {
 
 export type PitchStatus = "available" | "maintenance";
 
-// pitches/{pitchId}. Pitches carry no price: the hourly rate is typed on each reservation.
+// pitches/{pitchSlug}. `name` must match the `pitch` string on bookings exactly and is never renamed (archive instead).
+// Pitches carry no price: the hourly rate is typed on each booking.
 export type Pitch = {
-  id: string;
+  id: string; // pitchSlug, e.g. "fifa-pitch"
   name: string;
   surface: string;
   status: PitchStatus;
@@ -26,38 +57,21 @@ export type Pitch = {
   archived: boolean;
 };
 
-export type ReservationStatus = "confirmed" | "pending" | "cancelled";
-
-// reservations/{reservationId}, plus the document id
-export type Reservation = {
-  id: string;
-  pitchId: string;
-  pitchName: string; // denormalized for display
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string | null;
-  date: string; // "YYYY-MM-DD" in the center timezone
-  startAt: Timestamp;
-  endAt: Timestamp;
-  durationMinutes: number;
-  hourlyRateMinor: number; // fils
-  totalMinor: number; // fils, a snapshot that is never recomputed
-  status: ReservationStatus;
-  notes: string | null;
-  createdBy: string; // uid, or "legacy-import"
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  seriesId?: string; // recurring bookings share one
-  legacyId?: string; // id of the legacy `bookings` document this was copied from
-  source?: "legacy-import";
+// slots/{pitchSlug}_{date}_{HHmm}: one per occupied 30-minute slot (the double-booking guard)
+export type Slot = {
+  pitch: string;
+  date: string;
+  bookingId: string | null;
+  blockId: string | null;
 };
 
 // blocks/{blockId}: a pitch closed for part of a day (maintenance)
 export type Block = {
   id: string;
-  pitchId: string;
-  startAt: Timestamp;
-  endAt: Timestamp;
+  pitch: string;
+  date: string;
+  startTime: string;
+  endTime: string;
   reason: string;
   createdBy: string;
 };

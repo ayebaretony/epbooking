@@ -17,7 +17,16 @@ export function fromHHmm(value: string): number {
   return Number(value.slice(0, 2)) * 60 + Number(value.slice(2, 4));
 }
 
-// Slot document id: `${pitchId}_${date}_${HHmm}`
+// "Fifa Pitch" -> "fifa-pitch". Derived from the pitch name stored on each booking, so old bookings need no extra field.
+export function pitchSlug(pitchName: string): string {
+  return pitchName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Slot document id: `${pitchSlug}_${date}_${HHmm}`
 export function slotKey(pitchId: string, date: string, startMinutes: number): string {
   return `${pitchId}_${date}_${toHHmm(startMinutes)}`;
 }
