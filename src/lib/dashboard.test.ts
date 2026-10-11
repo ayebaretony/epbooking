@@ -98,3 +98,10 @@ test("utilisation counts each hour a booking covers, by weekday (Monday first), 
   assert.equal(grid.max, 2);
   assert.deepEqual(utilisation([], 2026), { hours: [], counts: [], max: 0 });
 });
+
+test("when two spellings are used equally often, the one with capital letters is shown (and it never flips)", () => {
+  const forward = [b("2026-01-01", 10, { clientName: "Juventus" }), b("2026-01-08", 10, { clientName: "juventus" })];
+  const backward = [...forward].reverse();
+  assert.equal(topRepeatClients(forward, 2026)[0].name, "Juventus");
+  assert.equal(topRepeatClients(backward, 2026)[0].name, "Juventus");
+});

@@ -78,6 +78,13 @@ export type ClientRow = { name: string; bookings: number; revenue: number };
 // are never changed.
 const clientKey = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
 
+// The spelling shown for a client: the one used most often. On a tie, one with capital letters ("Juventus") beats all-lowercase
+// ("juventus"), then alphabetical order, so the choice never changes between visits.
+function displayName(spellings: ReadonlyMap<string, number>): string {
+  const hasCapitals = (name: string) => name !== name.toLowerCase();
+  return [...spellings].sort((a, b) => b[1] - a[1] || Number(hasCapitals(b[0])) - Number(hasCapitals(a[0])) || a[0].localeCompare(b[0]))[0][0];
+}
+
 // Clients with more than one booking in the year, most bookings first. The name shown is the spelling used most often.
 export function topRepeatClients(bookings: readonly Booking[], year: number, limit = 5): ClientRow[] {
   const groups = new Map<string, { spellings: Map<string, number>; bookings: number; revenue: number }>();
@@ -94,7 +101,7 @@ export function topRepeatClients(bookings: readonly Booking[], year: number, lim
   }
   return [...groups.values()]
     .filter((group) => group.bookings > 1)
-    .map((group) => ({ name: [...group.spellings].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0], bookings: group.bookings, revenue: round2(group.revenue) }))
+    .map((group) => ({ name: displayName(group.spellings), bookings: group.bookings, revenue: round2(group.revenue) }))
     .sort((a, b) => b.bookings - a.bookings || b.revenue - a.revenue || a.name.localeCompare(b.name))
     .slice(0, limit);
 }
