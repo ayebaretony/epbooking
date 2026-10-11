@@ -21,6 +21,21 @@
   --color-danger: #b91c1c;
   --color-danger-tint: #f8ebea;
 
+  /* Pitch colours (tag background = "tint", text and accents = the plain colour). Green, blue, amber and purple are the
+     four in the owner's designs; rose and teal are for any pitch added later. */
+  --color-pitch-green-tint: #dcefdc;
+  --color-pitch-green: #245521;
+  --color-pitch-blue-tint: #e1ebf6;
+  --color-pitch-blue: #2c5f9e;
+  --color-pitch-amber-tint: #f3eac8;
+  --color-pitch-amber: #7a5a00;
+  --color-pitch-purple-tint: #ece5f6;
+  --color-pitch-purple: #5b3c9c;
+  --color-pitch-rose-tint: #f6e1e4;
+  --color-pitch-rose: #9c2f45;
+  --color-pitch-teal-tint: #d9efef;
+  --color-pitch-teal: #1f6b6b;
+
   /* Type scale from the style guide: display 28, heading 20, body 16, caption 12 */
   --text-display: 1.75rem;
   --text-heading: 1.25rem;

@@ -67,10 +67,11 @@ service cloud.firestore {
     // `name` must match the `pitch` string stored on bookings, so it can never be renamed (archive instead).
     function validPitch(p) {
       return p.keys().hasOnly(['name', 'description', 'defaultRatePerHour', 'color', 'sortOrder', 'archived'])
-        && p.keys().hasAll(['name', 'description', 'defaultRatePerHour', 'color', 'sortOrder', 'archived'])
+        && p.keys().hasAll(['name', 'description', 'color', 'sortOrder', 'archived'])
         && p.name is string && p.name.size() > 0 && p.name.size() <= 60
         && p.description is string && p.description.size() <= 100
-        && p.defaultRatePerHour is number && p.defaultRatePerHour >= 0
+        // Optional: pitches have no fixed price (each client's rate is negotiated), so most have none.
+        && (!('defaultRatePerHour' in p) || (p.defaultRatePerHour is number && p.defaultRatePerHour >= 0))
         && p.color is string && p.color.size() <= 30
         && p.sortOrder is number
         && p.archived is bool;

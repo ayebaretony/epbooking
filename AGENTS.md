@@ -141,12 +141,12 @@ Because old documents lack `status`, **filter by status in the app**, never with
 - `date` and times are the business's local time (Asia/Dubai). "Today" and "now" are computed in that timezone. Date maths happens on `YYYY-MM-DD` strings in UTC (`lib/time.ts`). Never use `toISOString()` to produce a booking date.
 - Range queries use the `date` string: `where("date", ">=", from).where("date", "<=", to).orderBy("date")`. This needs no extra index. Sort by `startTime` in the app. **Always use bounded ranges.** Never load the whole collection in the UI.
 - The pitch **name** is the stored identity (`pitch` field). `pitchSlug(name)` (e.g. `fifa-pitch`) is derived from it for slot keys and `pitches` document ids. **Pitch names must never be renamed or deleted** (archive instead), because old bookings refer to them by name.
-- Pitches have no fixed price. A pitch's **default hourly rate** (editable in Settings, shown in the designs) only **prefills** the booking form. Every booking stores its own `pricePerHour`, as today, because real prices vary (§3).
+- **Pitches have no fixed price (owner's decision, 2026-10-11): each client's rate is negotiated.** Every booking stores its own `pricePerHour`, as today. A pitch may optionally have a default hourly rate (Settings), which only **prefills** the booking form. It is **not seeded** and shows as "Not set". The booking form's price box must be typed by the person unless a default exists, and never guessed from history.
 
 ### New supporting collections (new documents only, nothing existing is touched)
 ```
 users/{uid}              displayName, email, role "admin"|"staff", active (bool), createdAt
-pitches/{pitchSlug}      name (exactly as in bookings), description (e.g. "11-a-side"), defaultRatePerHour (AED), color, sortOrder, archived
+pitches/{pitchSlug}      name (exactly as in bookings), description (e.g. "11-a-side"), defaultRatePerHour (AED, OPTIONAL: absent = "Not set"), color, sortOrder, archived
 slots/{pitchSlug}_{date}_{HHmm}   one doc per occupied 30-minute slot: pitch, date, bookingId
 ```
 **Kept deliberately small (2026-10-11):** none of the owner's designs show maintenance blocks, pitch status, opening-hours settings or an idle-timeout setting, so there are **no `blocks` or `settings` collections** in the first version. Opening hours (**07:00 to 23:00**, because real bookings run that late), 30-minute slots, currency **AED** and timezone **Asia/Dubai** are code constants (`DEFAULT_CENTER_SETTINGS` in `src/types/models.ts`). Add a collection only when a design needs it, with the owner's agreement.
@@ -204,7 +204,7 @@ The owner's designs are the PNG screens in `assets/` (reviewed 2026-10-11): `aut
 - **Repeat clients:** group by the **trimmed, lower-cased** client name (exact strings give 44 clients but only 39 once stray spaces are ignored). Do not change the stored names.
 - **Status:** the designs show Confirmed and Cancelled. Cancelling sets `status: "cancelled"` and frees the slots (the design says the booking "remains in your records"). Only an admin can delete permanently, so hide the delete action for staff.
 - **Contact field label:** the design says "phone or email". It is still the single `contact` field.
-- **Default pitch prices** in Settings (750, 400, 500, 250 in the design) are placeholders. The owner enters the real defaults. The form still lets each booking use its own rate.
+- **Default pitch prices** in Settings (750, 400, 500, 250 in the design) are placeholders, not data. Real prices are negotiated per client, so pitches are seeded with **no price** ("Not set") and a default is optional. Don't derive a default from past bookings either.
 - **Preferences:** dark mode and default booking duration are per-user conveniences, so store them on the device (localStorage) or the user's own `users` document, never in a shared document. Currency is fixed to AED (shown disabled).
 - **Staff accounts:** the sign-in design has no sign-up or Google button, and Settings has no user management. For the first version the owner creates each staff member's Auth account in the Firebase console plus a `users/{uid}` document, with step-by-step instructions from us. A "Team" screen is an open decision (§9).
 - **Reports:** the PDF and Excel exports need libraries the legacy app used (jsPDF, jspdf-autotable, SheetJS `xlsx`). **They are not in the approved stack. Ask the owner before adding them** (and prefer a maintained SheetJS build over the old npm `xlsx@0.18.5`, which has known vulnerabilities). Do this in Phase 6, not before.
@@ -218,7 +218,13 @@ The owner's designs are the PNG screens in `assets/` (reviewed 2026-10-11): `aut
   - **1A done (2026-10-11):** `firestore.rules` and `rules-tests/rules.test.ts` (`npm run test:rules`, 25 tests, emulator only). Run it with `BACKUP_FILE=<simplified backup .json>` and it also proves **every one of the 482 real bookings is accepted** (readable, editable, cancellable). Weakening a rule was confirmed to make the matching tests fail. **Whenever you change `firestore.rules`, re-run it with the backup.** The rules are still **not deployed** and must not be until cutover (§7).
   - **1B done (2026-10-11):** sign-in screen (desktop split layout and phone layout), show/hide password, friendly errors, forgot-password, route guards, "waiting for approval" screen, app shell (sidebar on desktop, top bar and bottom tabs on phones), placeholder pages and a Sign out button in Settings. Checked in a browser against the emulator for approved, unapproved and signed-out people. `npm run build`, `lint` and `test` pass. Try it locally with `scripts/seed_emulator_user.mjs` (README).
   - **Colours measured from the designs:** primary `#245521`, page `#F8FCF7`, sidebar `#EFF6EF`, active nav `#DBE6DA`, error tint `#F8EBEA`, font Inter. These are in `src/index.css`. (The tiny hex labels in the style guide image did not match the pixels, so the measured values win.)
-  - **Next:** Phase 2 (Settings screen with profile and pitches, seeded from the four existing pitch names; the emulator seed script that loads the backup into `bookings`; the slot backfill script).
+  - **Phase 2 done (2026-10-11):**
+    - `src/lib/backfill.ts` (+ tests) plans the slot documents and seeds the pitches from the names on bookings. On the 2026-10-11 backup: **482 bookings, 1,776 slots, 0 clashes, 0 skipped**; pitches Fifa Pitch, Airdome, Junior Football Pitch, Half Pitch with **no price**.
+    - `scripts/seed_emulator.ts --backup <file> [--reset]` loads the backup into the emulator, creates the pitches and slots, and makes the fake test users (**emulator only**). Running it twice changes nothing.
+    - `scripts/backfill_slots.ts` is the one-time additive setup for production. It reads `bookings`, writes only `slots` and `pitches` (create-only, never overwrites), is a **dry run by default**, and refuses `--production --apply` without `--confirm-production`. **Do not run it against production without the owner's explicit go-ahead, and only before the new rules are deployed (§7 step 3).**
+    - Settings screen: profile (edit your name), pitch management (admins add and edit; staff see a read-only list; the name of a saved pitch can't change), preferences (currency AED fixed, default booking duration kept on the device), and Sign out. Loading, empty and error states. **Dark mode is not built** (the designs have no dark palette; ask the owner before inventing one).
+    - Rules: `defaultRatePerHour` became optional on pitches (26 rules tests).
+  - **Next:** Phase 3 (Bookings: list, add, edit, cancel, recurring, with the transactional double-booking guard; then Today). Cutover (§7) can follow.
 - **Phase 2, Pitches and settings screen:** `pitches` list with colour and default rate (seeded from the four existing pitch names). Write the **slot backfill script** and an emulator seed script that loads the backup into `bookings`.
 - **Phase 3, Bookings:** new, edit and cancel with the **transactional conflict guard**, recurring bookings, list with filters, search, pagination, CSV and Excel export. **Cutover (§7) can happen after this phase**, with the owner's go-ahead.
 - **Phase 4, Calendar:** month, week and day views, pitch colour filter, click-to-create.
@@ -235,6 +241,7 @@ The owner's designs are the PNG screens in `assets/` (reviewed 2026-10-11): `aut
 Defaults are in italics and should sit behind settings so they're easy to change.
 
 - Data approach: **use the existing `bookings` documents directly, no copy, additive changes only** (decided 2026-10-11). The old site may go offline at cutover (decided 2026-10-11).
+- **Pitch prices are not fixed; each client's rate is negotiated** (decided 2026-10-11). No default is seeded, and a default is optional.
 - Project folder: **internal disk** (decided 2026-10-10). Hosting: *Firebase Hosting*. Deploy branch for the legacy site: `main`.
 - Do `Half Pitch` and `Fifa Pitch` (or any other pair) physically share space and need to block each other? *No: conflicts are per pitch only, matching current data.*
 - Opening hours: *07:00 to 23:00*. Are bookings past midnight allowed? *No.*

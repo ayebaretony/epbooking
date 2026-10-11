@@ -120,7 +120,6 @@ const newBooking = (uid: string, overrides: Record<string, unknown> = {}) => ({
 const pitch = (overrides: Record<string, Plain> = {}) => ({
   name: "Fifa Pitch",
   description: "11-a-side",
-  defaultRatePerHour: 750,
   color: "green",
   sortOrder: 1,
   archived: false,
@@ -318,7 +317,7 @@ describe("firestore.rules", () => {
       await assertSucceeds(getDoc(doc(staff.db, "pitches/fifa-pitch")));
       await assertFails(setDoc(doc(staff.db, "pitches/airdome"), pitch({ name: "Airdome" })));
       await assertSucceeds(setDoc(doc(admin.db, "pitches/airdome"), pitch({ name: "Airdome" })));
-      await assertSucceeds(updateDoc(doc(admin.db, "pitches/fifa-pitch"), { defaultRatePerHour: 800 }));
+      await assertSucceeds(updateDoc(doc(admin.db, "pitches/fifa-pitch"), { defaultRatePerHour: 800 })); // optional, can be added later
     });
 
     test("a pitch can never be renamed or deleted (old bookings refer to it by name)", async () => {
@@ -328,8 +327,14 @@ describe("firestore.rules", () => {
       await assertSucceeds(updateDoc(doc(admin.db, "pitches/fifa-pitch"), { archived: true }));
     });
 
+    test("a pitch needs no price (each client's rate is negotiated), but any price given must be valid", async () => {
+      await assertSucceeds(setDoc(doc(admin.db, "pitches/no-price"), pitch({ name: "No Price Pitch" })));
+      await assertSucceeds(setDoc(doc(admin.db, "pitches/priced"), pitch({ name: "Priced Pitch", defaultRatePerHour: 600 })));
+    });
+
     test("pitch data is validated", async () => {
       await assertFails(setDoc(doc(admin.db, "pitches/x"), pitch({ defaultRatePerHour: -1 })));
+      await assertFails(setDoc(doc(admin.db, "pitches/x"), pitch({ defaultRatePerHour: "free" })));
       await assertFails(setDoc(doc(admin.db, "pitches/x"), pitch({ extra: "no" })));
     });
   });

@@ -44,12 +44,13 @@ export type UserProfile = {
 };
 
 // pitches/{pitchSlug}. `name` must match the `pitch` string on bookings exactly and is never renamed (archive instead).
-// defaultRatePerHour (AED) only prefills the booking form: every booking stores its own pricePerHour.
+// Pitches have no fixed price: each client's rate is negotiated, so every booking stores its own pricePerHour.
+// defaultRatePerHour (AED) is optional (absent = "Not set") and only ever prefills the booking form.
 export type Pitch = {
   id: string; // pitchSlug, e.g. "fifa-pitch"
   name: string;
   description: string; // e.g. "11-a-side"
-  defaultRatePerHour: number;
+  defaultRatePerHour?: number;
   color: string;
   sortOrder: number;
   archived: boolean;
