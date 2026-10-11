@@ -5,7 +5,7 @@ rules_version = '2';
 // These rules are LIVE on pitchbookingsystem-6e222 (deployed at the cutover, 2026-10-11). Changing them changes who can read
 // the owner's real bookings, so: edit here, run `npm run test:rules` (with BACKUP_FILE set, see the README) and only deploy
 // with the owner's go-ahead (`npm run deploy:rules`). The old wide-open rules are kept for emergencies in
-// docs/rollback/firestore.rules.legacy-open and must never be deployed otherwise.
+// rollback/firestore.rules.legacy-open and must never be deployed otherwise.
 //
 // The `bookings` collection already holds a year of real documents. These rules accept every existing document
 // exactly as it is (the nine original fields, no extra fields), and only allow the optional additive fields

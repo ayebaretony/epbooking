@@ -20,6 +20,7 @@ The owner's decision (2026-10-11): **keep using the existing booking documents i
 - **Firebase project:** `pitchbookingsystem-6e222` (Cloud Firestore). Same project, same data.
 - **Reference project:** the owner's other app, **Servly** (`/Users/tony/Desktop/servly/servlycode`, a tennis court booking system), is an **example only** for stack, folder structure, conventions, Firestore rules style and the double-booking guard. Read it freely, but **never edit, commit to, push or open PRs on it**, and never touch its `.env.local` or Firebase project (`servly-87915`). Its data model differs from ours, so don't copy its schema.
 - **Repo:** `ayebaretony/epbooking` (**public**). Never commit secrets, backups or data exports.
+- **GitHub Pages serves `docs/` on `main`, and nothing else.** `docs/index.html` is a notice for the old web address (`ayebaretony.github.io/epbooking`) that sends visitors to the new site. **Everything in `docs/` is published on the internet, so never put anything else there** (that is why the emergency rollback rules live in `rollback/`, not `docs/`). The repo root `index.html` is the React app's own entry file; Pages does not use it. `legacy/` is a read-only archive of the old single-file app (its hard-coded login was removed).
 
 ## 2. Prime directive: protect the production data
 

@@ -27,10 +27,11 @@ The old single-file app lives in `legacy/` (the live site is still served from `
 
 ## Live site
 
+- **GitHub Pages** (`ayebaretony.github.io/epbooking`) serves only `docs/index.html`, a notice that redirects to the new site. Everything in `docs/` is public, so keep it to that one page. The root `index.html` is the React app's entry file, not a web page for Pages.
 - The new app is live at **https://pitchbookingsystem-6e222.web.app** (Firebase Hosting, free plan), using the real project `pitchbookingsystem-6e222`. The cutover from the old site happened on 2026-10-11 (see `AGENTS.md` section 7).
 - `npm run deploy:hosting` builds and publishes the site. It needs `.env.production.local` (git-ignored, the project's public web settings, `VITE_USE_EMULATORS=false`).
 - `npm run deploy:rules` publishes `firestore.rules`. That changes who can read the real bookings, so only do it with the owner's go-ahead, after `npm run test:rules` passes against a recent backup.
-- **Emergency rollback of the rules:** copy `docs/rollback/firestore.rules.legacy-open` over `firestore.rules` and run `npm run deploy:rules`. That re-opens the database to the whole internet, so put the proper rules back straight away.
+- **Emergency rollback of the rules:** copy `rollback/firestore.rules.legacy-open` over `firestore.rules` and run `npm run deploy:rules`. That re-opens the database to the whole internet, so put the proper rules back straight away.
 - There is deliberately no `.firebaserc`: every command names the project explicitly, so nothing can be deployed to the wrong place by accident.
 
 ## Safety
