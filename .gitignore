@@ -22,3 +22,6 @@ ui-debug.log
 
 # typescript
 *.tsbuildinfo
+
+# local Claude Code settings
+.claude/
