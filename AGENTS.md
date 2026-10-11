@@ -146,17 +146,14 @@ Because old documents lack `status`, **filter by status in the app**, never with
 ### New supporting collections (new documents only, nothing existing is touched)
 ```
 users/{uid}              displayName, email, role "admin"|"staff", active (bool), createdAt
-pitches/{pitchSlug}      name (exactly as in bookings), description (e.g. "11-a-side"), defaultRatePerHour (AED), status "available"|"maintenance", color, sortOrder, archived
-slots/{pitchSlug}_{date}_{HHmm}   one doc per occupied 30-minute slot: pitch, date, bookingId|null, blockId|null
-blocks/{blockId}         pitch, date, startTime, endTime, reason, createdBy   (maintenance closures)
-settings/center          centerName, currency "AED", timezone "Asia/Dubai", openTime "07:00", closeTime "23:00", slotMinutes 30
-settings/security        idleTimeoutMinutes
+pitches/{pitchSlug}      name (exactly as in bookings), description (e.g. "11-a-side"), defaultRatePerHour (AED), color, sortOrder, archived
+slots/{pitchSlug}_{date}_{HHmm}   one doc per occupied 30-minute slot: pitch, date, bookingId
 ```
-`closeTime` is `23:00` because real bookings run that late.
+**Kept deliberately small (2026-10-11):** none of the owner's designs show maintenance blocks, pitch status, opening-hours settings or an idle-timeout setting, so there are **no `blocks` or `settings` collections** in the first version. Opening hours (**07:00 to 23:00**, because real bookings run that late), 30-minute slots, currency **AED** and timezone **Asia/Dubai** are code constants (`DEFAULT_CENTER_SETTINGS` in `src/types/models.ts`). Add a collection only when a design needs it, with the owner's agreement.
 
 ### Slot backfill (one-time, additive)
 The double-booking guard (§6) needs a slot document for every booking. Existing bookings have none, so a **backfill script** creates them:
-- Reads `bookings`, writes **only to `slots`** (and seeds `pitches` and `settings/center`). It never writes to `bookings`.
+- Reads `bookings`, writes **only to `slots`** (and seeds `pitches`). It never writes to `bookings`.
 - Idempotent (slot ids are deterministic), has `--dry-run`, **reports** any slot collision instead of failing, and verifies afterwards: slot count equals the sum of `hours * 2` over all bookings (**1,776** for the 2026-10-10 backup) and every slot's `bookingId` exists.
 - Run it in the emulator first with the backup loaded. Production run only with the owner's explicit approval, as part of the cutover (§7).
 - The app deletes or rewrites a booking's slot documents in the same transaction when that booking is edited, cancelled or deleted. Deleting a slot that doesn't exist is fine.
@@ -167,8 +164,7 @@ Same design as Servly, applied **per pitch**:
 
 1. Compute every slot key the booking covers: `${pitchSlug}_${date}_${HHmm}` at 30-minute granularity.
 2. In one `runTransaction`, read all of those slot docs. **If any exists, abort** with "That time is no longer available". Otherwise write the booking and all its slot docs together.
-3. Cancelling, editing or deleting updates the slot docs in the same transaction. Maintenance blocks write slot docs too.
-4. Security rules also reject creating a slot doc that already exists (no `update` on slots).
+3. Cancelling, editing or deleting updates the slot docs in the same transaction. 4. Security rules also reject creating a slot doc that already exists (no `update` on slots).
 5. Different pitches may overlap in time, because the current data shows the business allows it (§3). Whether `Half Pitch` physically shares space with `Fifa Pitch` is an **open decision** (§9).
 6. Recurring bookings are **in scope** (the legacy app has them and 46 current bookings came from them): create N bookings, each through the transaction, sharing an optional `seriesId`. Show the owner which dates conflict instead of silently skipping them. Monthly series count from the original date (`addMonths`), so they never drift.
 7. Test: overlapping times, back-to-back (allowed), same time on different pitches (allowed), cancel then rebook (allowed), two simultaneous attempts (one must fail).
@@ -183,7 +179,7 @@ Same design as Servly, applied **per pitch**:
 **Cutover sequence (each step needs the owner's go-ahead):**
 1. New app tested on the emulator with the backup loaded. Owner creates the first admin and staff accounts in the console.
 2. Fresh backup (`scripts/backup_bookings.py`).
-3. Run the slot backfill against production **while the old rules are still in place** (dry run first, then real run, then verify). It only adds to `slots`, `pitches` and `settings`.
+3. Run the slot backfill against production **while the old rules are still in place** (dry run first, then real run, then verify). It only adds to `slots` and `pitches`.
 4. Deploy the new `firestore.rules` and the new app to Firebase Hosting together. The legacy site stops working.
 5. Replace the legacy GitHub Pages `index.html` with a notice and link to the new app. The old hard-coded password stays in public git history, so treat it as compromised and never reuse it.
 6. **Rollback** if needed: redeploy the old open rules. Existing bookings are intact. Only bookings the owner or staff edited in the new app gained the optional extra fields, and the legacy app ignores those.
@@ -199,7 +195,7 @@ The owner's designs are the PNG screens in `assets/` (reviewed 2026-10-11): `aut
 **Design tokens** (from the style guide in `settings.png`; define once as Tailwind theme tokens): deep green `#186534` (primary), slate `#334155`, success `#15803D`, warning `#B45309`, danger `#B91C1C`. Type scale: display 28px, heading 20px, body 16px, caption 12px. 8px spacing grid. Pale green page background, white cards with a thin border and rounded corners. Pitch colours in the designs: Fifa Pitch green, Airdome blue, Junior Football Pitch amber, Half Pitch purple (stored in `pitches.color`).
 
 **Where the designs and the real data disagree, or need something we don't store.** Handle these as listed, and ask the owner before inventing anything beyond them:
-- **Schedule window:** the designs show 16:00 to 22:00. **96 of the 482 bookings start before 16:00** (mornings from 07:00), so the Today and Calendar views must cover the full opening hours (07:00 to 23:00, from `settings/center`). They can scroll or default to a busy window, but must never hide a booking.
+- **Schedule window:** the designs show 16:00 to 22:00. **96 of the 482 bookings start before 16:00** (mornings from 07:00), so the Today and Calendar views must cover the full opening hours (07:00 to 23:00, from the code constants). They can scroll or default to a busy window, but must never hide a booking.
 - **Booking number (`#PS-1042`):** bookings have no number, only a random document id. Show a short id derived from the document id (e.g. the first 6 characters) until the owner decides otherwise. Don't add a counter.
 - **Booking type (One-off or recurring):** shown from `seriesId`. Older recurring bookings have none, so they show as "One-off".
 - **Created by and Created date:** missing on all existing bookings (they predate sign-in). Show "Not recorded" for those, never a guess.
@@ -209,7 +205,7 @@ The owner's designs are the PNG screens in `assets/` (reviewed 2026-10-11): `aut
 - **Status:** the designs show Confirmed and Cancelled. Cancelling sets `status: "cancelled"` and frees the slots (the design says the booking "remains in your records"). Only an admin can delete permanently, so hide the delete action for staff.
 - **Contact field label:** the design says "phone or email". It is still the single `contact` field.
 - **Default pitch prices** in Settings (750, 400, 500, 250 in the design) are placeholders. The owner enters the real defaults. The form still lets each booking use its own rate.
-- **Preferences:** dark mode and default booking duration are per-user conveniences, so store them on the device (localStorage) or the user's own `users` document, never in `settings/center` (admin-only). Currency is fixed to AED (shown disabled).
+- **Preferences:** dark mode and default booking duration are per-user conveniences, so store them on the device (localStorage) or the user's own `users` document, never in a shared document. Currency is fixed to AED (shown disabled).
 - **Staff accounts:** the sign-in design has no sign-up or Google button, and Settings has no user management. For the first version the owner creates each staff member's Auth account in the Firebase console plus a `users/{uid}` document, with step-by-step instructions from us. A "Team" screen is an open decision (§9).
 - **Reports:** the PDF and Excel exports need libraries the legacy app used (jsPDF, jspdf-autotable, SheetJS `xlsx`). **They are not in the approved stack. Ask the owner before adding them** (and prefer a maintained SheetJS build over the old npm `xlsx@0.18.5`, which has known vulnerabilities). Do this in Phase 6, not before.
 
@@ -219,14 +215,16 @@ The owner's designs are the PNG screens in `assets/` (reviewed 2026-10-11): `aut
 
 - **Phase 0, Setup (done):** scaffold, emulators, typed models, money, slot and date helpers with tests. Colour tokens and UI primitives wait for the owner's designs.
 - **Phase 1, Auth and shell:** login, auth guard, approval-pending screen, sidebar and topbar, `users` handling, the real `firestore.rules` plus rules tests against the backup data.
-- **Phase 2, Pitches and settings:** `pitches` list with status and colour, seed `settings/center`. Write the **slot backfill script** and an emulator seed script that loads the backup into `bookings`.
+  - **1A done (2026-10-11):** `firestore.rules` and `rules-tests/rules.test.ts` (`npm run test:rules`, 25 tests, emulator only). Run it with `BACKUP_FILE=<simplified backup .json>` and it also proves **every one of the 482 real bookings is accepted** (readable, editable, cancellable). Weakening a rule was confirmed to make the matching tests fail. **Whenever you change `firestore.rules`, re-run it with the backup.** The rules are still **not deployed** and must not be until cutover (§7).
+  - **1B next:** sign-in screen, auth guard, app shell (sidebar, bottom tabs), from the `auth` and `home` designs.
+- **Phase 2, Pitches and settings screen:** `pitches` list with colour and default rate (seeded from the four existing pitch names). Write the **slot backfill script** and an emulator seed script that loads the backup into `bookings`.
 - **Phase 3, Bookings:** new, edit and cancel with the **transactional conflict guard**, recurring bookings, list with filters, search, pagination, CSV and Excel export. **Cutover (§7) can happen after this phase**, with the owner's go-ahead.
-- **Phase 4, Calendar:** month, week and day views, pitch colour legend, day panel, click-to-create, maintenance blocks.
+- **Phase 4, Calendar:** month, week and day views, pitch colour filter, click-to-create.
 - **Phase 5, Dashboard:** stat cards, today's timeline, revenue this month, recent bookings, plus the existing "top repeat clients" and "pitch earnings" views.
 - **Phase 6, Revenue and reports:** revenue by day, week, month and pitch, plus the PDF performance report the legacy app produced. (The legacy "AI Analysis" is template text, not real AI. Don't claim otherwise.)
 - **Phase 7, Hardening:** rules review and tests, index check, quota check, accessibility pass, empty-data walkthrough, handover notes.
 
-**Query discipline (Spark limits):** always query by a bounded date range, paginate lists with `limit()` and `startAfter()`, use `getCountFromServer()` for totals, use `onSnapshot` only for today's view, cache pitches and settings, and commit composite indexes in `firestore.indexes.json` for any multi-field query.
+**Query discipline (Spark limits):** always query by a bounded date range, paginate lists with `limit()` and `startAfter()`, use `getCountFromServer()` for totals, use `onSnapshot` only for today's view, cache pitches, and commit composite indexes in `firestore.indexes.json` for any multi-field query.
 
 **Definition of done:** matches the design, has loading, empty and error states, works on a phone-width screen, shows no hard-coded data, formats all money in AED through the shared formatter, `npm run build`, `npm run lint` and `npm test` pass, queries are bounded and indexed, security rules cover every collection and field, and **existing bookings still display and total correctly**.
 

@@ -1,5 +1,5 @@
 // All money is stored as integer fils (100 fils = 1 AED) and shown through these helpers (AGENTS.md section 5).
-// Components never write "AED" themselves; the currency comes from settings/center.
+// Components never write "AED" themselves; the currency comes from DEFAULT_CENTER_SETTINGS.
 
 const formatters = new Map<string, Intl.NumberFormat>();
 

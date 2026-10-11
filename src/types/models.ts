@@ -43,8 +43,6 @@ export type UserProfile = {
   active: boolean;
 };
 
-export type PitchStatus = "available" | "maintenance";
-
 // pitches/{pitchSlug}. `name` must match the `pitch` string on bookings exactly and is never renamed (archive instead).
 // defaultRatePerHour (AED) only prefills the booking form: every booking stores its own pricePerHour.
 export type Pitch = {
@@ -52,7 +50,6 @@ export type Pitch = {
   name: string;
   description: string; // e.g. "11-a-side"
   defaultRatePerHour: number;
-  status: PitchStatus;
   color: string;
   sortOrder: number;
   archived: boolean;
@@ -62,22 +59,10 @@ export type Pitch = {
 export type Slot = {
   pitch: string;
   date: string;
-  bookingId: string | null;
-  blockId: string | null;
+  bookingId: string;
 };
 
-// blocks/{blockId}: a pitch closed for part of a day (maintenance)
-export type Block = {
-  id: string;
-  pitch: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  reason: string;
-  createdBy: string;
-};
-
-// settings/center
+// Fixed business settings (code constants, no Firestore document in the first version)
 export type CenterSettings = {
   centerName: string;
   currency: string;
@@ -87,7 +72,7 @@ export type CenterSettings = {
   slotMinutes: number;
 };
 
-// Used until settings/center has been seeded. Closing time is 23:00 because real bookings run that late.
+// Closing time is 23:00 because real bookings run that late.
 export const DEFAULT_CENTER_SETTINGS: CenterSettings = {
   centerName: "Palace Sports",
   currency: "AED",

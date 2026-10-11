@@ -12,6 +12,7 @@ The old single-file app lives in `legacy/` (the live site is still served from `
 | `npm run emulators` | Start the Firebase emulators (Auth + Firestore) as the fake project `demo-epbooking` |
 | `npm run dev` | Start the app. With `VITE_USE_EMULATORS=true` (the default in `.env.example`) it talks only to the emulators |
 | `npm test` | Unit tests for money, slot and date logic (Node's built-in test runner, no extra dependency) |
+| `npm run test:rules` | Security-rules tests against the emulators (needs Java). Set `BACKUP_FILE=/path/to/bookings-….json` (a simplified backup) to also prove every real booking is accepted |
 | `npm run build` | Type-check and build |
 | `npm run lint` | ESLint |
 

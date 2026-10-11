@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node --test \"src/**/*.test.ts\"",
+    "test:rules": "firebase emulators:exec --only auth,firestore --project demo-epbooking \"node --test rules-tests/*.test.ts\"",
     "emulators": "firebase emulators:start --project demo-epbooking"
   },
   "dependencies": {
