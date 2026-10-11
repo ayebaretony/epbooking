@@ -56,3 +56,8 @@ export function aedToFils(aed: number): number {
 export function filsToAed(fils: number): number {
   return fils / 100;
 }
+
+// Stored amounts are AED numbers (e.g. 790.65), so screens format them through here: "AED 790.65", "AED 1,500"
+export function formatAed(aed: number, currency: string): string {
+  return formatMoney(aedToFils(aed), currency);
+}

@@ -1,5 +1,3 @@
-import type { Timestamp } from "firebase/firestore";
-
 // Shapes of the data (AGENTS.md sections 3 and 5).
 // The `bookings` collection is the EXISTING one: its nine original fields never change. Everything below
 // "optional additive fields" is missing on old documents and must be treated as its default when absent.
@@ -23,8 +21,9 @@ export type Booking = {
   status?: BookingStatus; // missing = "confirmed"
   notes?: string;
   createdBy?: string; // uid
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdByName?: string; // the creator's name at the time, so any staff member can see who made it
+  createdAt?: Date;
+  updatedAt?: Date;
   seriesId?: string; // recurring bookings share one
 };
 

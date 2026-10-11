@@ -130,6 +130,7 @@ The nine fields in §3 stay exactly as they are, and **new bookings written by t
 | `status` | `"confirmed"` \| `"pending"` \| `"cancelled"` | `"confirmed"` |
 | `notes` | string | none |
 | `createdBy` | string (uid) | unknown (created before sign-in existed) |
+| `createdByName` | string | "Not recorded" (the creator's name at the time, so any staff member can see who made it) |
 | `createdAt` / `updatedAt` | Timestamp | unknown |
 | `seriesId` | string | not part of a recurring series |
 
@@ -224,7 +225,15 @@ The owner's designs are the PNG screens in `assets/` (reviewed 2026-10-11): `aut
     - `scripts/backfill_slots.ts` is the one-time additive setup for production. It reads `bookings`, writes only `slots` and `pitches` (create-only, never overwrites), is a **dry run by default**, and refuses `--production --apply` without `--confirm-production`. **Do not run it against production without the owner's explicit go-ahead, and only before the new rules are deployed (§7 step 3).**
     - Settings screen: profile (edit your name), pitch management (admins add and edit; staff see a read-only list; the name of a saved pitch can't change), preferences (currency AED fixed, default booking duration kept on the device), and Sign out. Loading, empty and error states. **Dark mode is not built** (the designs have no dark palette; ask the owner before inventing one).
     - Rules: `defaultRatePerHour` became optional on pitches (26 rules tests).
-  - **Next:** Phase 3 (Bookings: list, add, edit, cancel, recurring, with the transactional double-booking guard; then Today). Cutover (§7) can follow.
+  - **Phase 3 done (2026-10-11):**
+    - **Bookings list:** search, pitch, month and year filters, newest/oldest sort, pagination (10 per page), table on desktop and cards on phones, view/edit/delete actions (delete admin-only). One year is loaded at a time (a bounded query); the year list comes from the first and last booking dates.
+    - **New / edit booking** (side panel on desktop, full screen on phones, openable from any screen via `useBookingDrawer().openNew(prefill)`): live total, a live "Slot available / already booked" check that does not wait for a price, the pitch's optional default price fills an EMPTY price box only, end time fills from the device's default duration, weekly and monthly series with a date preview that marks clashing dates. **The price box is never pre-filled from history.**
+    - **Booking details page:** summary, client contact with Call and WhatsApp (display-only phone normaliser), type (One-off or Recurring), created by and when ("Not recorded" for old bookings), Edit, Cancel booking (with the design's confirmation), and Delete permanently (admin only).
+    - **`bookings.service.ts`** (database passed in, so it is tested in the emulator): create, edit, cancel and delete each run as ONE transaction over the booking and its slots. A clash throws `SlotConflictError` and writes nothing. Editing leaves `hours` and `totalPayment` exactly as stored unless the times or price changed, and never adds `createdBy` to an old booking. A recurring series is created one booking per transaction and reports every date that could not be booked.
+    - **Rules:** new optional `createdByName` (set once, like `createdBy`).
+    - **Tests:** 70 unit tests, and 41 emulator tests including five people booking the same slot at once (exactly one wins) and a run against all 482 real bookings. Removing the clash check from the service was confirmed to break four tests.
+    - **Not built yet:** Today and Calendar (Phase 4), Dashboard (5), Reports (6). The booking activity timeline and "pending" workflow are not built (no data behind them).
+  - **Next:** the Today screen and Calendar (Phase 4), then Dashboard. **Cutover (§7) can now happen**, with the owner's go-ahead: the app can sign people in, list, create, edit, cancel and delete bookings safely. Staff would not have Today, Calendar, Dashboard or Reports until those phases, so the owner decides whether to cut over first or wait.
 - **Phase 2, Pitches and settings screen:** `pitches` list with colour and default rate (seeded from the four existing pitch names). Write the **slot backfill script** and an emulator seed script that loads the backup into `bookings`.
 - **Phase 3, Bookings:** new, edit and cancel with the **transactional conflict guard**, recurring bookings, list with filters, search, pagination, CSV and Excel export. **Cutover (§7) can happen after this phase**, with the owner's go-ahead.
 - **Phase 4, Calendar:** month, week and day views, pitch colour filter, click-to-create.
@@ -246,6 +255,7 @@ Defaults are in italics and should sit behind settings so they're easy to change
 - Do `Half Pitch` and `Fifa Pitch` (or any other pair) physically share space and need to block each other? *No: conflicts are per pitch only, matching current data.*
 - Opening hours: *07:00 to 23:00*. Are bookings past midnight allowed? *No.*
 - What counts as revenue? *Confirmed bookings only (a missing status counts as confirmed). Pending shown separately, cancelled excluded.*
+- **A recurring series with a clash:** the form currently refuses to create the series while any date clashes (the clashing dates are marked in the preview), so the person adjusts the times or the count. The alternative is to create only the free dates. *Refuse for now; owner to say.*
 - Payments and deposits tracking (the designs hint at "Payment received"), an activity log, booking requests, a separate clients collection, customer email: *not in the first version* (customer details stay on each booking, as today). Owner to say if payments should come next.
 - Booking numbers like `#PS-1042`: *short document id for now.*
 - A "Team" screen to add and approve staff: *no, the owner creates accounts in the Firebase console for now.*

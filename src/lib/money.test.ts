@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aedToFils, calcTotalMinor, filsToAed, formatMoney, formatRate, minorToMajorInput, parseMajorToMinor } from "./money.ts";
+import { aedToFils, calcTotalMinor, filsToAed, formatAed, formatMoney, formatRate, minorToMajorInput, parseMajorToMinor } from "./money.ts";
 
 // Intl puts a non-breaking space after "AED"; compare with a normal one.
 const plain = (text: string) => text.replace(/\u00a0/g, " ");
@@ -49,4 +49,10 @@ test("the new price rule reproduces how existing bookings were totalled", () => 
   // 1.5 hours at AED 527.10 was stored as 790.65; 2 hours at AED 224.07 as 448.14
   assert.equal(filsToAed(calcTotalMinor(aedToFils(527.1), 90)), 790.65);
   assert.equal(filsToAed(calcTotalMinor(aedToFils(224.07), 120)), 448.14);
+});
+
+test("stored AED amounts are shown through formatAed", () => {
+  assert.equal(plain(formatAed(1500, "AED")), "AED 1,500");
+  assert.equal(plain(formatAed(790.65, "AED")), "AED 790.65");
+  assert.equal(plain(formatAed(0, "AED")), "AED 0");
 });

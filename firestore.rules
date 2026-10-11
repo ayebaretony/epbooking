@@ -89,12 +89,12 @@ service cloud.firestore {
     // ---------- bookings (the existing collection) ----------
 
     // The nine original fields are required, so every existing document is valid as it is.
-    // The optional additive fields are absent on old documents: status, notes, createdBy, createdAt, updatedAt, seriesId.
+    // The optional additive fields are absent on old documents: status, notes, createdBy, createdByName, createdAt, updatedAt, seriesId.
     // Times are zero-padded "HH:mm", so comparing them as text compares them as times.
     function validBooking(b) {
       return b.keys().hasOnly([
           'pitch', 'clientName', 'contact', 'date', 'startTime', 'endTime', 'pricePerHour', 'hours', 'totalPayment',
-          'status', 'notes', 'createdBy', 'createdAt', 'updatedAt', 'seriesId'
+          'status', 'notes', 'createdBy', 'createdByName', 'createdAt', 'updatedAt', 'seriesId'
         ])
         && b.keys().hasAll([
           'pitch', 'clientName', 'contact', 'date', 'startTime', 'endTime', 'pricePerHour', 'hours', 'totalPayment'
@@ -114,6 +114,7 @@ service cloud.firestore {
         && (!('status' in b) || b.status in ['confirmed', 'pending', 'cancelled'])
         && (!('notes' in b) || (b.notes is string && b.notes.size() <= 500))
         && (!('createdBy' in b) || b.createdBy is string)
+        && (!('createdByName' in b) || (b.createdByName is string && b.createdByName.size() <= 100))
         && (!('createdAt' in b) || b.createdAt is timestamp)
         && (!('updatedAt' in b) || b.updatedAt is timestamp)
         && (!('seriesId' in b) || (b.seriesId is string && b.seriesId.size() <= 64));
@@ -134,6 +135,7 @@ service cloud.firestore {
       allow update: if isActive()
         && validBooking(request.resource.data)
         && request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
+        && request.resource.data.get('createdByName', null) == resource.data.get('createdByName', null)
         && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
         && request.resource.data.updatedAt == request.time;
 

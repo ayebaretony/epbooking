@@ -7,105 +7,10 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { after, before, beforeEach, describe, test } from "node:test";
-import { deleteApp, initializeApp, type FirebaseApp } from "firebase/app";
-import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import {
-  collection,
-  connectFirestoreEmulator,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  getFirestore,
-  serverTimestamp,
-  setDoc,
-  setLogLevel,
-  updateDoc,
-  writeBatch,
-  type Firestore,
-} from "firebase/firestore";
-
-// The SDK logs every denial it receives; the tests expect many, so keep the output readable.
-setLogLevel("silent");
-
-const PROJECT = "demo-epbooking";
-const FIRESTORE = "http://127.0.0.1:8080";
-const DOCS = `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents`;
-
-// ---------- emulator helpers ----------
-
-type Plain = string | number | boolean | null | Date;
-
-function toValue(v: Plain) {
-  if (v === null) return { nullValue: null };
-  if (v instanceof Date) return { timestampValue: v.toISOString() };
-  if (typeof v === "string") return { stringValue: v };
-  if (typeof v === "boolean") return { booleanValue: v };
-  return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
-}
-
-// Writes documents as the emulator's admin ("owner" token bypasses the rules), to set up test data.
-async function seed(docs: { path: string; data: Record<string, Plain> }[]) {
-  for (let i = 0; i < docs.length; i += 200) {
-    const writes = docs.slice(i, i + 200).map(({ path, data }) => ({
-      update: {
-        name: `projects/${PROJECT}/databases/(default)/documents/${path}`,
-        fields: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toValue(v)])),
-      },
-    }));
-    const res = await fetch(`${DOCS}:commit`, {
-      method: "POST",
-      headers: { Authorization: "Bearer owner", "Content-Type": "application/json" },
-      body: JSON.stringify({ writes }),
-    });
-    assert.equal(res.status, 200, await res.text());
-  }
-}
-
-async function clearFirestore() {
-  const res = await fetch(`${FIRESTORE}/emulator/v1/projects/${PROJECT}/databases/(default)/documents`, { method: "DELETE" });
-  assert.equal(res.status, 200);
-}
-
-async function assertSucceeds(promise: Promise<unknown>) {
-  await promise;
-}
-
-async function assertFails(promise: Promise<unknown>) {
-  await assert.rejects(promise, (error: { code?: string }) => error.code === "permission-denied");
-}
-
-type Principal = { db: Firestore; uid: string | null };
-const apps: FirebaseApp[] = [];
-
-// A signed-in person (or nobody, when email is null) as seen by Firestore.
-async function principal(name: string, email: string | null): Promise<Principal> {
-  const app = initializeApp({ apiKey: "demo-key", projectId: PROJECT }, name);
-  apps.push(app);
-  const db = getFirestore(app);
-  connectFirestoreEmulator(db, "127.0.0.1", 8080);
-  if (email === null) return { db, uid: null };
-  const auth = getAuth(app);
-  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  const { user } = await createUserWithEmailAndPassword(auth, email, "test-password-123");
-  return { db, uid: user.uid };
-}
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { assertFails, assertSucceeds, clearFirestore, closeApps, legacyBooking, principal, seed, type Plain, type Principal } from "./helpers.ts";
 
 // ---------- test data ----------
-
-// A booking exactly as the existing system stored them: the nine original fields only.
-const legacyBooking = (overrides: Record<string, Plain> = {}) => ({
-  pitch: "Fifa Pitch",
-  clientName: "Test Client",
-  contact: "0500000000",
-  date: "2026-11-01",
-  startTime: "18:00",
-  endTime: "20:00",
-  pricePerHour: 750,
-  hours: 2,
-  totalPayment: 1500,
-  ...overrides,
-});
 
 // A booking as the new app writes it: the nine fields plus the optional additive ones.
 const newBooking = (uid: string, overrides: Record<string, unknown> = {}) => ({
@@ -144,7 +49,7 @@ describe("firestore.rules", () => {
   });
 
   after(async () => {
-    await Promise.all(apps.map((app) => deleteApp(app)));
+    await closeApps();
   });
 
   beforeEach(async () => {
@@ -255,6 +160,13 @@ describe("firestore.rules", () => {
       await assertFails(updateDoc(doc(staff.db, "bookings/mine"), { createdBy: admin.uid, updatedAt: serverTimestamp() }));
       await assertFails(updateDoc(doc(staff.db, "bookings/mine"), { createdAt: new Date("2020-01-01"), updatedAt: serverTimestamp() }));
       await assertFails(updateDoc(doc(staff.db, "bookings/old1"), { createdBy: staff.uid, updatedAt: serverTimestamp() })); // old booking can't gain it
+    });
+
+    test("the creator's display name is optional, set once, and can never be changed or added later", async () => {
+      await assertSucceeds(setDoc(doc(staff.db, "bookings/named"), newBooking(staff.uid!, { createdByName: "Staff Person" })));
+      await assertFails(setDoc(doc(staff.db, "bookings/long"), newBooking(staff.uid!, { createdByName: "x".repeat(101) })));
+      await assertFails(updateDoc(doc(staff.db, "bookings/named"), { createdByName: "Someone Else", updatedAt: serverTimestamp() }));
+      await assertFails(updateDoc(doc(staff.db, "bookings/old1"), { createdByName: "Staff Person", updatedAt: serverTimestamp() })); // old booking can't gain one
     });
 
     test("only an admin can delete a booking", async () => {
